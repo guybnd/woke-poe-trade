@@ -7,7 +7,7 @@ import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
 import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, kindOf, sectionMode } from '@/web/woke/loot-filter/currency-weights'
-import { CLUSTER_ROWS, clusterFloor } from '@/web/woke/loot-filter/jewel-classes'
+import { CLUSTER_ROWS, clusterEnchantRows, clusterFloor, clusterSizeOf } from '@/web/woke/loot-filter/jewel-classes'
 import { TOP_LIFE_MANA } from '@/web/woke/loot-filter/flask-classes'
 import { BASE_FACTS } from '@/web/woke/loot-filter/base-facts'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
@@ -58,29 +58,50 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     expect(hit.final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's3' })
   })
 
-  it('cluster jewel bases go under the passive type price rules, priced by the cheapest of their kind', () => {
+  it('cluster jewel bands priced by the cheapest of their kind, money enchants get rows above the NeverSink price rules', () => {
+    const L = (passives: number, ilvl: number, node: string, chaos: number, listings = 20) => ({ size: 'Large' as const, passives, ilvl, node, chaos, listings })
     const lines = [
-      { size: 'Large', passives: 8, ilvl: 84, chaos: 30, listings: 20 },
-      { size: 'Large', passives: 8, ilvl: 84, chaos: 6, listings: 20 },
-      { size: 'Large', passives: 8, ilvl: 84, chaos: 1, listings: 2 },
-      { size: 'Large', passives: 8, ilvl: 75, chaos: 2, listings: 20 }
+      L(8, 84, 'Chaos Damage', 100),
+      L(8, 84, 'Fire Damage', 6),
+      L(8, 84, 'Cold Damage', 1, 2),
+      L(8, 75, 'Fire Damage', 2),
+      // Thin data under 84: capped at the same enchant's 84+ price.
+      L(8, 68, 'Chaos Damage', 263),
+      L(12, 84, 'Minion Damage', 2897),
+      L(12, 84, 'Fire Damage', 7)
     ]
     const at84 = CLUSTER_ROWS.find(r => r.name === 'Large Cluster Jewel, 8 passives, item level 84+')!
     expect(clusterFloor(at84, lines)).toBe(6)
     expect(clusterFloor(CLUSTER_ROWS.find(r => r.name === 'Large Cluster Jewel, 8 passives, item level under 84')!, lines)).toBe(2)
+    const rows = clusterEnchantRows(lines)
+    expect(rows.map(r => [r.name, r.chaos])).toEqual([
+      ['Large Cluster Jewel, Minion Damage, 12 passives, item level 84+', 2897],
+      ['Large Cluster Jewel, Chaos Damage, 8 passives, item level 84+', 100],
+      ['Large Cluster Jewel, Chaos Damage, 8 passives, item level under 84', 100]
+    ])
+    expect(clusterSizeOf(rows[0].name)).toBe('Large')
     const doc = parseFilter(SEMI)
     const lookup: PriceLookup = () => null
-    applyCurrency(doc, on(), lookup, null, null, null, lines.map(l => ({ ...l, size: 'Large' as const, node: 'x' })))
-    const big = matchItem(doc, facts('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 8 }))
-    expect(big.final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
-    expect(big.final?.block.comment).toMatch(/jewclus/)
-    // A 9-passive Large is the catch-all row: a guess, still shown (Always).
-    expect(matchItem(doc, facts('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 9 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's1' })
-    // Under NeverSink's cluster price rules, which still come first.
-    const first = doc.blocks.findIndex(b => b.comment.includes('jewclus'))
+    applyCurrency(doc, on(), lookup, null, null, null, lines)
+    const jewel = (passives: number, ilvl: number, node?: string) => facts('Large Cluster Jewel', 'Jewels', 'Rare', ilvl, { enchantmentPassiveNum: passives, enchantPassiveNodes: node ? [node] : [] })
+    // The money enchant is loud; another enchant on the same band is the band's price.
+    expect(matchItem(doc, jewel(12, 84, 'Minion Damage')).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
+    // A type NeverSink's price rules name and we have no row for: theirs.
+    expect(matchItem(doc, jewel(8, 84, 'Fire Damage')).final?.block).toMatchObject({ type: 'jewels->clustereco' })
+    // Any other type: the band row, at the band's price.
+    expect(matchItem(doc, jewel(10, 84, 'Wand Damage')).final?.block.comment).toMatch(/jewclus/)
+    // A 9-passive Large: a guess, still shown (Always).
+    expect(matchItem(doc, jewel(9, 84)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show' })
+    // Enchant rows above NeverSink's cluster price rules; band rows under
+    // them, so those rules still catch a passive type without a row.
+    const ench = doc.blocks.findIndex(b => b.comment.includes('jewclus') && b.conditions.some(c => c.key === 'EnchantmentPassiveNode'))
+    const band = doc.blocks.findIndex(b => b.comment.includes('jewclus') && !b.conditions.some(c => c.key === 'EnchantmentPassiveNode'))
     const eco = doc.blocks.findIndex(b => b.type === 'jewels->clustereco')
     expect(eco).toBeGreaterThanOrEqual(0)
-    expect(first).toBeGreaterThan(eco)
+    expect(ench).toBeLessThan(eco)
+    expect(band).toBeGreaterThan(eco)
+    // A type poe.ninja prices only under 84 gets no row there.
+    expect(clusterEnchantRows([L(8, 84, 'Fire Damage', 6), L(8, 68, 'Cold Damage', 2), L(8, 68, 'Wand Damage', 40)]).map(r => r.name)).toEqual([])
   })
 
   it('heist gear louder from item level 83, unique contracts loud, corpses by name', () => {

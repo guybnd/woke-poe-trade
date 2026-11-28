@@ -1607,8 +1607,20 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(row86).not.toContainText('est.')
   await page.keyboard.press('Escape')
   await expect(page.locator('[data-maps-pile] [data-map-drop]').first()).toBeVisible()
-  await expect(page.locator('[data-loot-jewels]')).toContainText('Follow poe.ninja')
   await overlay.snap('loot tab, jewels')
+  // Cluster jewels: one section, a fold per size, band rows and money enchant
+  // rows on the Loot ruler (WOKEPOET-726). The price rules card is gone.
+  await expect(page.locator('[data-loot-jewels]')).not.toContainText('Follow poe.ninja')
+  const clus = page.locator('[data-currency-cat="jewclus"]')
+  await clus.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  const large = clus.locator('[data-currency-sub="Large Cluster Jewel"]')
+  await expect(large).toBeVisible()
+  await large.locator('[aria-expanded]').click()
+  await expect(clus.locator('[data-currency-item="Large Cluster Jewel, 12 passives, item level 84+"]')).toContainText('12 passives, item level 84+')
+  await expect(clus.locator('[data-currency-item="Large Cluster Jewel, 12 passives, item level 84+"]')).not.toContainText('Large Cluster Jewel,')
+  await expect(clus.locator('[data-currency-item="Large Cluster Jewel, 12 passives, item level 84+"] [data-loot-row-on]')).toBeChecked()
+  await clus.scrollIntoViewIfNeeded()
+  await test.info().attach('loot tab, cluster jewels', { body: await clus.screenshot(), contentType: 'image/png' })
   const ujewel = page.locator('[data-unique-jewel]').first()
   if (await ujewel.count()) {
     const name = await ujewel.getAttribute('data-unique-jewel')

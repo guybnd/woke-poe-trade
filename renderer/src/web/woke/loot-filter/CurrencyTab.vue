@@ -167,12 +167,12 @@
           <span :class="$style.subFold" role="button" tabindex="0" :aria-expanded="isOpen(`${g.cat.id}/${sg.name}`)"
             @click="toggle(`${g.cat.id}/${sg.name}`)" @keydown.enter.prevent="toggle(`${g.cat.id}/${sg.name}`)" @keydown.space.prevent="toggle(`${g.cat.id}/${sg.name}`)">
             <i class="fas text-xs w-dim" :class="isOpen(`${g.cat.id}/${sg.name}`) ? 'fa-chevron-down' : 'fa-chevron-right'" />
-            <span :class="$style.subName">{{ sg.name }}</span>
+            <span v-item-tip="g.cat.id === 'jewclus' && sg.name !== 'Any size' ? { name: sg.name } : null" :class="$style.subName">{{ sg.name }}</span>
             <span :class="$style.count">{{ sg.shown }} of {{ sg.all.length }} show</span>
             <span :class="$style.dots" aria-hidden="true"><i v-for="r in sg.all" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
           </span>
           <span class="flex-1" />
-          <label :class="$style.whole">{{ kind === 'gems' ? 'Whole band' : 'Whole tier' }}
+          <label :class="$style.whole">{{ kind === 'gems' ? 'Whole band' : g.cat.id === 'jewclus' ? 'Whole size' : 'Whole tier' }}
             <select :value="sg.step" :class="$style.sel2" :aria-label="`Step for every ${sg.name} item`" @change="setSubStep(sg.all, ($event.target as HTMLSelectElement).value)">
               <option v-if="sg.step === 'mixed'" value="mixed" disabled>Mixed</option>
               <option value="auto">Price decides</option>
@@ -206,7 +206,7 @@
 // the steps and where they start, one ground pile, then every item in its
 // category, each with the stack it needs for each step and an editor.
 import { computed, nextTick, ref, watch } from 'vue'
-import { WButton, WChip, WIcon, WInfo, WItemRow, WPrice, WToggle, toast } from '../ui'
+import { WButton, WChip, WIcon, WInfo, WItemRow, WPrice, WToggle, toast, vItemTip } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
 import { lootTipRef } from './base-tip'
 import { clusterPricesFor } from './cluster-ninja'
@@ -331,6 +331,8 @@ function gemCorrupted (it: CurrencyItem): boolean {
   return v != null && gemBand(v)?.corrupted === true
 }
 function rowName (it: CurrencyItem): string {
+  // A cluster row sits in its size's fold: the size isn't said again.
+  if (it.cat === 'jewclus') return it.name.replace(/^(Large|Medium|Small) Cluster Jewel, /, '')
   return gemCorrupted(it) ? it.name.replace(/c$/, '') : it.name
 }
 

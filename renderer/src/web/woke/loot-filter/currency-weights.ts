@@ -32,7 +32,7 @@ import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, REPLICA_GUESS, REPLICA_PREFIX, REPLICA_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, WOMBGIFTS, corpseGuess, wombgiftGuess } from './league-classes'
-import { CLUSTER_BASE_TYPE, CLUSTER_ROWS, JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE, clusterFloor } from './jewel-classes'
+import { CLUSTER_BASE_TYPE, CLUSTER_ROWS, CLUSTER_SIZES, JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE, clusterEnchantRows, clusterFloor, clusterSizeOf } from './jewel-classes'
 import { FLASK_CATEGORIES, FLASK_IDS, FLASK_LOOK, FLASK_ROWS, FLASK_RULE_TYPE } from './flask-classes'
 import type { ClusterPrice } from './cluster-prices'
 import { replicaBases, uniquesOnBase } from '../shared/uniques-on-base'
@@ -142,7 +142,10 @@ const GEM_BANDED = new Set(['gemtrans', 'gemvaal', 'gemsup', 'gemskill'])
 export const SUBGROUPS: Record<string, readonly string[]> = {
   essences: [...ESSENCE_TIERS, 'Special'],
   ...Object.fromEntries([...GEM_BANDED].map(id => [id, GEM_BANDS])),
-  gemvaal: ['21/23', '21/20', '20/23', ...PLAIN_BANDS]
+  gemvaal: ['21/23', '21/20', '20/23', ...PLAIN_BANDS],
+  // Cluster jewels fold by size (WOKEPOET-726).
+  // Rows for every size (fractured) first.
+  jewclus: ['Any size', ...CLUSTER_SIZES.map(s => `${s} Cluster Jewel`)]
 }
 function gemBandOf (name: string, cat: string): string {
   const m = / (\d+)(?:\/(\d+))?(c)?$/.exec(name)
@@ -153,6 +156,7 @@ function gemBandOf (name: string, cat: string): string {
 }
 export function subgroupOf (name: string, cat: string): string | null {
   if (GEM_BANDED.has(cat)) return gemBandOf(name, cat)
+  if (cat === 'jewclus') { const size = clusterSizeOf(name); return size ? `${size} Cluster Jewel` : 'Any size' }
   if (cat !== 'essences') return null
   const tier = ESSENCE_TIERS.find(t => name.startsWith(`${t} Essence of `))
   return tier ?? 'Special'
@@ -641,10 +645,11 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   if (ownSkeleton || doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
     for (const j of JEWEL_ROWS) setRow(j, 'jewels', j.bts[0])
   }
-  // Cluster jewel bases (M4a): the cheapest cluster jewel of the kind on
-  // poe.ninja, else a guess.
-  for (const r of CLUSTER_ROWS) {
-    const floor = clusters?.length ? clusterFloor(r, clusters) : null
+  // Cluster jewels (WOKEPOET-726): band rows at the cheapest cluster jewel
+  // of the band on poe.ninja, else a guess, and a row for each money enchant.
+  const enchants = clusters?.length ? clusterEnchantRows(clusters) : []
+  for (const r of [...enchants, ...CLUSTER_ROWS]) {
+    const floor: number | null = 'chaos' in r ? (r as { chaos: number }).chaos : clusters?.length ? clusterFloor(r, clusters) : null
     const own = edits[r.name]?.price
     seen.set(r.name, {
       name: r.name,
@@ -1453,9 +1458,14 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec' && it.cat !== SIXLINK_CAT && it.cat !== 'uniqrep'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels' && it.cat !== 'jewclus'), faint) ?? none
-  // Cluster bases under the cluster price rules: NeverSink's cluster base
-  // rules, else just under its last cluster price rule.
-  const clus = applyAt(doc, eff, all.filter(it => it.cat === 'jewclus'), faint, b => b.type === CLUSTER_BASE_TYPE, true, b => b.type === CLUSTER_PRICE_RULES) ?? none
+  // Cluster jewels: the money enchant rows above NeverSink's cluster price
+  // rules, so they win; the band rows under them, as before, so those rules
+  // (and the Rules tab's Cluster page) still catch a valuable passive type
+  // poe.ninja has no row for (no prices yet, thin listings).
+  const isEnchant = (it: CurrencyItem) => it.cat === 'jewclus' && it.conds?.some(c => c.key === 'EnchantmentPassiveNode') === true
+  const clusEnch = applyAt(doc, eff, all.filter(isEnchant), faint, b => b.type === CLUSTER_PRICE_RULES || b.type === CLUSTER_BASE_TYPE, true) ?? none
+  const clusBand = applyAt(doc, eff, all.filter(it => it.cat === 'jewclus' && !isEnchant(it)), faint, b => b.type === CLUSTER_BASE_TYPE, true, b => b.type === CLUSTER_PRICE_RULES) ?? none
+  const clus = { blocks: [...clusEnch.blocks, ...clusBand.blocks], items: [...clusEnch.items, ...clusBand.items], chars: clusEnch.chars + clusBand.chars }
   // Flasks above NeverSink's flask rules and the quality flask recipe, so the
   // recipe's Small never caps a 30% flask.
   const flasks = applyAt(doc, eff, all.filter(it => it.type === 'flasks'), faint, b => (b.type != null && FLASK_RULE_TYPE.test(b.type)) || (b.type === CURRENCY_TYPE && /: recipe: /.test(b.comment)), true) ?? none

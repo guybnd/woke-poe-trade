@@ -115,6 +115,7 @@ import type { ChipOption } from './StateChip.vue'
 import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, rowForBase, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { clusterPricesFor } from './cluster-ninja'
 import { toggleNotAvg } from './currency-settings'
 import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
@@ -182,7 +183,7 @@ const raw = computed<CurrencyItem | null>(() => {
   if (!doc || !lookup) return null
   loadCardFacts()
   loadOwnTables()
-  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value, clusterPricesFor(props.store.prices.currentLeague.value))
   if (!props.gem) {
     const hit = itemFor(all, props.name, props.rule)
     const row = (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
