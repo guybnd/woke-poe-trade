@@ -54,8 +54,3 @@ export function timeLeft (until: number, now: number): string {
   const min = Math.max(1, Math.ceil((until - now) / 60_000))
   return min < 60 ? `${min} min left` : `${Math.ceil(min / 60)} h left`
 }
-
-// Hidden for good: its own id, or the icon it folds into (dock.ts iconHidden).
-export function iconHiddenIn (p: { id: string, into?: string }, hidden: readonly string[]): boolean {
-  return hidden.includes(p.id) || (p.into != null && hidden.includes(p.into))
-}

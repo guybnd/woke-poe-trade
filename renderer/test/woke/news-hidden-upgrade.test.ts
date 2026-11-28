@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest'
 import type { WokeModulesConfig } from '@/web/woke/modules'
 import { NEWS, newsFor, newsIsOff, seenNewsIds, unseenNews } from '@/web/woke/tab-bar/news'
 import { setNewsOff } from '@/web/woke/tab-bar/news-off'
-import { iconHiddenIn } from '@/web/woke/dock/dismiss-rules'
 
 // The settings file as an older release saved it: the icon hidden, the lines
 // of that release seen, and the newest line not out yet.
@@ -47,13 +46,5 @@ describe("What's new hidden for good, across an update", () => {
     setNewsOff(woke, false)
     expect(woke.dock?.hidden).toEqual(['drop-counter'])
     expect(newsIsOff(woke)).toBe(false)
-  })
-})
-
-describe('an icon folded into a hidden one', () => {
-  it('stays hidden when it shows up later on its own', () => {
-    expect(iconHiddenIn({ id: 'lab-gems', into: 'lab' }, ['lab'])).toBe(true)
-    expect(iconHiddenIn({ id: 'lab-gems', into: 'lab' }, ['drop-counter'])).toBe(false)
-    expect(iconHiddenIn({ id: 'lab' }, ['lab-gems'])).toBe(false)
   })
 })

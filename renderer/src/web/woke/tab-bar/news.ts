@@ -121,7 +121,7 @@ export function markAllNewsSeen (woke: WokeModulesConfig): void {
 // the icon meant "stop telling me": no NEW seals or rail count after the next
 // update either (they used to come back with every update).
 export function newsIsOff (woke: WokeModulesConfig | undefined): boolean {
-  return woke?.newsOff === true || woke?.dock?.hidden?.includes('whats-new') === true
+  return !!(woke?.newsOff || woke?.dock?.hidden?.includes('whats-new'))
 }
 
 // What counts as seen. Before setup's first Finish (or with it closed
