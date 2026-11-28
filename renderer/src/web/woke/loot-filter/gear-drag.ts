@@ -3,16 +3,18 @@
 import { ref } from 'vue'
 import type { Lane } from './gear'
 
-export type GearMove = Lane | 'build' | 'unbuild'
+export type GearMove = Lane | 'build' | 'unbuild' | 'exotic' | 'exotichi'
 
 // A card in the picked set drags the whole set; any other card drags alone.
 export function dragSet (picked: string[], base: string): string[] {
   return picked.includes(base) ? [...picked] : [base]
 }
 
-// Exotic is NeverSink's own list: nothing can be put there.
+// Exotic is NeverSink's own list: nothing else can be put there. Its two
+// lanes (valuable and the rest) swap bases between them.
+const EXOTIC = ['exotic', 'exotichi']
 export function canDrop (from: string, to: string): boolean {
-  return to !== from && to !== 'exotic'
+  return to !== from && (!EXOTIC.includes(to) || EXOTIC.includes(from))
 }
 
 // Out of Build into a rank: it leaves the build and takes that rank, or the
@@ -22,6 +24,7 @@ export function canDrop (from: string, to: string): boolean {
 export function dropMoves (from: string, to: string): GearMove[] {
   if (!canDrop(from, to)) return []
   if (to === 'build') return ['build']
+  if (EXOTIC.includes(to)) return [to as GearMove]
   const lane = to as Lane
   return from === 'build' && lane !== 'never' ? ['unbuild', lane] : [lane]
 }

@@ -602,7 +602,7 @@ const LOOK_SWATCH: Record<LookKey, string> = {
   fated: '#ffcd82',
   mirr: '#a0c8ff',
   corr: '#5a0000',
-  exotic: '#ff8c1a',
+  exotic: 'linear-gradient(90deg,#ff78b4,#ff32c8)',
   rarity: 'linear-gradient(90deg,#c8c8c8,#8888ff,#ffff77)',
   score: 'linear-gradient(90deg,#232323,#141400,#004b1e,#5a0000)'
 }

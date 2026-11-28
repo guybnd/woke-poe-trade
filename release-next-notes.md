@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter (beta): Base ranks splits Exotic in two. Exotic, valuable holds the exotic bases worth about a divine or more (NeverSink's top exotic tiers: talismans, Simplex Amulet, Cogwork and Dusk Rings and more), Exotic the rest. Drag a base between them to change it. On Equipment › Rare gear the valuable ones score higher, as before, and now get their own text colour: magenta, with the other exotics rose.
 - Loot filter (beta): Alt+F on a Loot tab item names its section ("Loot › Early league, Hidden" instead of "Currency weights › S0"), and Go to rule opens that item on the Loot tab.
 - Loot filter, Loot tab Gems: Transfigured, Vaal, Supports and Skill gems fold by level and quality: corrupted ones first (21/23, 21/20, 20/23, 20/20, 20/0, 1/20, 1/0+), then the rest (20/20, 20/0, 1/20, 1/0+), each with a Whole band step.
 - Loot filter, Loot tab: Gold has its own ruler. Slide where Small, Normal, Decent, Big and Tink start by pile size (default every pile shows, 500+ Normal, 3,000+ Decent).
