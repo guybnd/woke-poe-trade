@@ -215,6 +215,13 @@ describe('levelling gear', () => {
     expect(lv(ar, gear('Helmets', 'Iron Hat', 'Normal', 30, { dropLevel: 1, width: 2, height: 2 }))).not.toBe(0)
   })
 
+  it('exotic bases (base ranks x1, x2) never hide for other builds or defences', () => {
+    const doc = gearDoc()
+    expect(lv(doc, gear('Two Hand Axes', 'Psychotic Axe', 'Normal', 45, { dropLevel: 45, width: 2, height: 4 }))).not.toBe(0)
+    expect(lv(doc, gear('Boots', 'Basemetal Treads', 'Magic', 45, { dropLevel: 45, width: 2, height: 2 }))).not.toBe(0)
+    expect(lv(doc, gear('Two Hand Axes', 'Stone Axe', 'Normal', 45, { dropLevel: 30, width: 2, height: 4 }))).toBe(0)
+  })
+
   it('jewellery: every white and blue until Act 2, useful bases until Act 6', () => {
     const doc = gearDoc()
     expect(lv(doc, gear('Rings', 'Iron Ring', 'Normal', 10, { dropLevel: 1, width: 1, height: 1 }))).toBe(2)

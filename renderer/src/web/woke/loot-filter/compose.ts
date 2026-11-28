@@ -5,7 +5,7 @@
 import { applyFlasks } from './flask-weights'
 import { parseFilterCopy } from './parse'
 import type { FilterDoc } from './parse'
-import { ownBaseText } from './own-base'
+import { ownBaseText, ownGearHideFrom } from './own-base'
 import { gameNameCheck, nameCheck, ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
@@ -26,8 +26,10 @@ import { CLUSTER_PRICE_TYPE, applyClusterPrices } from './cluster-prices'
 import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
+import type { IdGroup } from './id-mods'
 import { applyCurrency, recipeStep, scaled } from './currency-weights'
 import { levellingGearBlocks, questlikeBlocks, retireNeverSinkLevelling } from './levelling-gear'
+import { lvConds } from './levelling'
 import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
@@ -73,6 +75,8 @@ export interface ComposeInput {
   gems?: readonly GemLine[] | null
   // The Loot tab's own item lists and guesses (own-lists.ts), once read.
   own?: OwnTables | null
+  // Identified gear's mod lists for Rare weights (id-mods.ts), once read.
+  ids?: IdGroup[] | null
   // Write onto our own skeleton (own-base.ts) instead of NeverSink's file,
   // at the strictness NeverSink's file has (NeverSink retirement M3).
   ownBase?: boolean
@@ -137,7 +141,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const migrated = migratedPresets(cfg.presets)
   // Rare weights (beta) first, so everything below goes on top of them.
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
-  const weights = applyWeights(next, cfg.presets.weights, weightBases)
+  const weights = applyWeights(next, cfg.presets.weights, weightBases, cfg.ids ?? [])
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
@@ -152,6 +156,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     retireNeverSinkLevelling(next, migrated.currency)
     insertBuildBlocks(next, [...questlikeBlocks(), ...levellingGearBlocks(migrated.currency, cfg.presets.weapons, input ? { weaponClasses: input.weaponClasses, rareBases: input.rareBases } : null)])
   }
+  if (cfg.ownBase) ownGearHideFrom(next, currency ? lvConds(migrated.currency) : null)
   // Build rules go in first, so edits to them (restyles) apply on top.
   let buildCount = 0
   if (input) {

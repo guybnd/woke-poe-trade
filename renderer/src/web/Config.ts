@@ -4,7 +4,7 @@ import { Host } from '@/web/background/IPC'
 import { HostConfig, ShortcutAction } from '@ipc/types'
 import type * as widget from './overlay/widgets'
 import { wokeGlobalShortcuts, wokeShortcutsFor } from './woke/shortcuts'
-import { LOOT_FILTER_TYPE, seedLootFilterWidget } from './woke/loot-filter/widget'
+import { LOOT_FILTER_TYPE, lootOnForAll, seedLootFilterWidget } from './woke/loot-filter/widget'
 import { addEssenceScanWidget } from './woke/essence-scan/widget'
 import { ensureWokeConfig, renameOldDefaultTitles, filterAptShortcuts, isModuleOn, needsGameLog, WOKE_CONFIG_VERSION } from './woke/modules'
 import { MAP_CHECK_TYPE, initMapCheckWidget } from './woke/map-mods/map-check'
@@ -583,6 +583,13 @@ function upgradeConfig (_config: Config): Config {
       config.widgets.push(seedLootFilterWidget(Math.max(0, ...config.widgets.map(w => w.wmId)) + 1, taken))
     }
     ensureWokeConfig(modules).woke.lootFilterSeeded = true
+  }
+  // woke: the Loot tab is on for everyone once NeverSink's tab is gone.
+  // Once only, so one you switch off stays off.
+  const lootWidgets = config.widgets.filter(w => w.wmType === LOOT_FILTER_TYPE)
+  if (!modules.woke?.lootOnByDefault && (lootWidgets.length || modules.woke)) {
+    for (const w of lootWidgets) lootOnForAll(w as unknown as Parameters<typeof lootOnForAll>[0])
+    ensureWokeConfig(modules).woke.lootOnByDefault = true
   }
   // woke: essence scan's on/off hotkey works once the module is on, without
   // adding the panel first. Once only, so one you removed stays removed.

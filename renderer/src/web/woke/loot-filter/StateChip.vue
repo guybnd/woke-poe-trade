@@ -21,14 +21,9 @@
           <span><b>{{ o.label }}</b><span v-if="o.desc" :class="$style.desc">{{ o.desc }}</span></span>
         </button>
         <div v-if="bias !== undefined" :class="[$style.biasBox, { [$style.dead]: biasOff }]">
-          <div :class="$style.biasTop"><span title="Every item in this section; an item's own price or Worth × is set on its row">Price bias, whole section</span><b>{{ pctText(dragBias ?? bias) }}</b></div>
-          <input type="range" :min="-NUDGE_MAX" :max="NUDGE_MAX" step="1" :value="-(dragBias ?? bias)" :disabled="biasOff" :class="$style.range" aria-label="Price bias"
-            data-state-chip-bias
-            @input="dragBias = -Number(($event.target as HTMLInputElement).value)"
-            @change="commitBias(-Number(($event.target as HTMLInputElement).value))">
-          <div :class="$style.ticks"><span>Penalty</span><span>none</span><span>Bonus</span></div>
+          <div :class="$style.biasTop"><span title="Every item in this section. An item's own bias is on its Alt + F card">Price bias, whole section</span><b>{{ pctText(dragBias ?? bias) }}</b></div>
+          <BiasSlider :model-value="bias" label="Price bias" :disabled="biasOff" data-state-chip-bias @drag="v => dragBias = v" @update:model-value="commitBias" />
           <div :class="$style.desc">{{ biasOff ? `Not used while ${cur?.label ?? 'off'}.` : biasLine(dragBias ?? bias) }}</div>
-          <button v-if="bias !== 0" type="button" :class="$style.reset" @click="commitBias(0)">No bias</button>
         </div>
       </div>
     </Teleport>
@@ -37,7 +32,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
-import { NUDGE_MAX } from './currency-settings'
+import BiasSlider from './BiasSlider.vue'
 import { tipZoom } from '../ui/popup-zoom'
 
 export interface ChipOption { value: string, label: string, desc?: string, dot?: string, hollow?: boolean, glow?: boolean }
@@ -49,8 +44,7 @@ const props = defineProps<{
   title: string
   // The value a row starts on; any other shows as moved (gold edge).
   dflt?: string
-  // A section's own strictness as notches (×1.25 on its step prices per
-  // notch); shown as a price bias. Left out: no slider.
+  // A section's Price bias in % (100 is none). Left out: no slider.
   bias?: number
   // The mode the bias does nothing in (Hide); it counts in every other.
   noBiasIn?: string
@@ -65,14 +59,11 @@ const dragBias = ref<number | null>(null)
 
 const cur = computed(() => props.options.find(o => o.value === props.modelValue))
 const biasOff = computed(() => props.noBiasIn != null && props.modelValue === props.noBiasIn)
-// A notch up makes every step cost ×1.25: the items count at 1/1.25 of their price.
-function pct (n: number) { return Math.round((1.25 ** -n - 1) * 100) }
-function pctText (n: number) { const p = pct(n); return p === 0 ? 'none' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%` }
+function pctText (n: number) { return n === 100 ? 'none' : `${n}%` }
 function biasLine (n: number) {
-  const p = pct(n)
-  return p === 0 ? 'Priced as poe.ninja says.' : `Every item here counts at ${100 + p}% of its price, so it shows ${p < 0 ? 'less' : 'more'}.`
+  return n === 100 ? 'Priced as poe.ninja says.' : `Every item here counts at ${n}% of its price, so it shows ${n < 100 ? 'less' : 'more'}.`
 }
-const biasText = computed(() => props.bias && !biasOff.value ? pctText(props.bias) : '')
+const biasText = computed(() => props.bias != null && props.bias !== 100 && !biasOff.value ? pctText(props.bias) : '')
 const moved = computed(() => (props.dflt != null && props.modelValue !== props.dflt) || !!biasText.value)
 
 function dotStyle (o?: ChipOption) {
@@ -168,7 +159,4 @@ onBeforeUnmount(() => close(false))
 .dead { opacity: 0.45; }
 .biasTop { display: flex; justify-content: space-between; align-items: baseline; color: var(--w-dim); }
 .biasTop b { font-weight: 400; color: var(--w-gold-hi); font-size: var(--w-fs-md); font-variant-numeric: tabular-nums; }
-.range { width: 100%; accent-color: var(--w-accent); }
-.ticks { display: flex; justify-content: space-between; color: var(--w-faint); font-size: var(--w-fs-xs); }
-.reset { align-self: flex-start; padding: 0; border: none; background: none; color: var(--w-dim); text-decoration: underline; cursor: pointer; font-size: var(--w-fs-xs); }
 </style>

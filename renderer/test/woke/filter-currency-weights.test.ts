@@ -190,7 +190,7 @@ describe('currency weights', () => {
 
   it('a section with its own ruler starts its steps there, Strictness on top, bias left out (Guy\'s A)', () => {
     const c = defaultCurrency()
-    c.nudge = { essences: 2 }
+    c.bias = { essences: 64 }
     c.rulers = { essences: [1, 2, 4, 8, 100] }
     expect(stepStarts(c, 'essences')).toEqual([1, 2, 4, 8, 100])
     expect(stepStarts(c, 'orbs')).toEqual([c.line, ...c.from.map(f => Math.max(c.line, f))])
@@ -288,9 +288,9 @@ describe('currency weights', () => {
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 
-  it('a category strictness multiplies all its steps, ×1.25 a notch', () => {
+  it('a section Price bias of 64% makes its items count at 64%: every step costs 1/0.64', () => {
     const base = on(c => { c.line = 1 })
-    const less = on(c => { c.line = 1; c.nudge = { orbs: 2 } })
+    const less = on(c => { c.line = 1; c.bias = { orbs: 64 } })
     expect(stepStarts(less, 'orbs')).toEqual(stepStarts(base, 'orbs').map(v => v * 1.5625))
     expect(stepStarts(less, 'oils')).toEqual(stepStarts(base, 'oils'))
     const items = currencyItems(parseFilter(SEMI), lookup)
@@ -442,7 +442,9 @@ describe('currency weights', () => {
     expect(normalizeCurrency({ items: { 'The Doctor': { min: 2 }, 'Rain of Chaos': { min: 9 } } } as never).items).toEqual({ 'The Doctor': { min: 2 } })
     const c = normalizeCurrency({ from: [5, 2, 40, 90], nudge: { orbs: 2, oils: 9, Bad: 1, ess: 0 }, items: { 'Divine Orb': { step: 9, price: -1 }, 'Golden Oil': { step: 4, look: { fontSize: 40 } }, 'x"y': { step: 1 } } } as never)
     expect(c.from).toEqual([5, 5, 40, 90])
-    expect(c.nudge).toEqual({ orbs: 2 })
+    // Old notches become a %: one notch up counted its items at 80%.
+    expect(c.bias).toEqual({ orbs: 64 })
+    expect(normalizeCurrency({ bias: { orbs: 150, oils: 500, gems: 100, essences: 20.5 } } as never).bias).toEqual({ orbs: 150 })
     expect(c.items).toEqual({ 'Golden Oil': { step: 4, look: { fontSize: 40 } } })
   })
 })

@@ -22,7 +22,7 @@ export const JEWEL_CATEGORIES: LootCategory[] = [
 export const JEWEL_IDS = new Set(JEWEL_CATEGORIES.map(x => x.id))
 // Both start Always: each row shows at its set look; By price on the
 // section puts them on the price ladder instead (Guy 2026-11-28).
-export const JEWEL_MODES: Record<string, SectionMode> = { jewabyss: 'always', jewplain: 'always' }
+export const JEWEL_MODES: Record<string, SectionMode> = { jewabyss: 'always', jewplain: 'always', jewclus: 'always' }
 
 export const JEWEL_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   jewabyss: { text: [150, 215, 120], color: 'Green', shape: 'Raindrop' },

@@ -8,7 +8,7 @@
     <template #toolbar>
       <WBackLink v-if="trail.length" :to="backTo" title="Back to where you were (mouse back button)" @back="goBack" />
       <WSelect :model-value="sourceKey" :options="fileOptions" style="max-width: 20rem;" @update:model-value="pickSource" />
-      <WButton size="sm" variant="ghost" icon="fas fa-sync" title="Reload the file list and the filter" @click="refresh" />
+      <WButton size="sm" variant="ghost" icon="fas fa-sync" :title="config.neversink.on ? 'Reload the file list and the filter, and check for a NeverSink update' : 'Reload the file list and the filter'" @click="refresh" />
       <span :title="config.sampleHotkey ? `In game, hover an item and press ${config.sampleHotkey} to find its rule: inventory, stash or ground labels. Hold Alt for items your filter hides.` : undefined" @paste.capture="onSearchPaste">
         <ItemSearchField v-model="search" :doc="store.doc.value" :area-level="searchAreaLevel" :drop="tab === 'preview'" @open-rule="openRule" @drop-item="dropPick" />
       </span>
@@ -17,7 +17,7 @@
       <WBanner v-if="store.error.value">{{ store.error.value }}
         <template #actions><WButton size="sm" @click="refresh">Retry</WButton></template>
       </WBanner>
-      <WBanner v-else-if="banner" :tone="banner.tone">{{ banner.text }}
+      <WBanner v-else-if="banner" :tone="banner.tone" :title="store.updateReady.value && config.neversink.latestChanges ? config.neversink.latestChanges : undefined">{{ banner.text }}
         <template #actions><WButton v-for="a in banner.actions" :key="a.label" size="sm" :variant="a.primary ? 'primary' : 'ghost'" @click="a.run()">{{ a.label }}</WButton></template>
       </WBanner>
     </template>
@@ -286,10 +286,9 @@
     <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" @open-rule="openRule" />
     <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" :focus="tabFocus" @open-rule="r => jumpTo(r.type, r.tier)" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" @open-loot="tab = 'currency'" />
-    <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
     <!-- build rules -->
-    <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll">
+    <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll" data-filter-build-tab>
       <WEmpty v-if="!buildInput" icon="fas fa-user-cog">
         No active build. Pick one in PoB builds. <WInfo text="Press Use build there, and its gems, link colours and uniques can be added to your filter here." />
       </WEmpty>
@@ -414,7 +413,6 @@ import PresetsTab from './PresetsTab.vue'
 import GearTab from './GearTab.vue'
 import EquipmentTab from './EquipmentTab.vue'
 import { CURRENCY_TYPE } from './currency-settings'
-import { experimentalUnlocked } from '../personal'
 // The Loot tab loads when opened: the price check's score card shares this
 // chunk, and the Loot tab's pages and grounds would ride along into memory.
 const LootTab = defineAsyncComponent(() => import('./LootTab.vue'))
@@ -428,7 +426,6 @@ import { RULE_TYPE, nameCheck, newRule, ruleProblem, ruleSummary } from './rules
 import type { OwnRule } from './rules'
 import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
-import NeverSinkTab from './NeverSinkTab.vue'
 import { LEVEL_NAMES } from './strictness'
 import HistoryList from './HistoryList.vue'
 import { exampleItem } from './example-item'
@@ -475,7 +472,7 @@ const props = defineProps<{
   // Group/tier to show first (from the sample card).
   focus?: { type: string, tier: string } | null
   // A tab to show (from the dock card). A new object each time.
-  openTab?: { tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null
+  openTab?: { tab: 'prices' | 'currency' | 'changes' | 'gear' | 'weights' } | null
 }>()
 
 const emit = defineEmits<{ (e: 'close' | 'tab-opened'): void, (e: 'paste-item', text: string): void }>()
@@ -493,17 +490,14 @@ const tabFocus = ref<string | null>(null)
 // is a lazy chunk that mounts after the next tick, so a focus cleared then
 // never reached it (Guy 2026-11-28: Go to rule opened Currency, not Gems).
 let focusTab: string | null = null
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
-// Equipment shows (beta): Base ranks is its section, else a top tab.
-const equipShown = computed(() => experimentalUnlocked.value || props.config.presets.weights.on)
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'build' | 'changes'>('rules')
+// Base ranks is a section of the Equipment tab.
 function openRanks () {
-  if (!equipShown.value) { tab.value = 'ranks'; return }
   tabFocus.value = 'ranks'
   tab.value = 'weights'
   nextTick(() => { tabFocus.value = null }).catch(() => {})
 }
 watch(gearRanksAsk, () => { if (takeRanksAsk('tab')) openRanks() }, { immediate: true })
-watch(equipShown, v => { if (v && tab.value === 'ranks') openRanks() })
 const search = ref('')
 const selType = ref<string | null>(null)
 const selTier = ref<string | null>(null)
@@ -562,15 +556,13 @@ const tabOptions = computed(() => [
   { value: 'rules', label: 'Rules' },
   // Gear: two screens of their own, what shows (by rank and drop tier) and which bases sit in which rank.
   { value: 'gear', label: 'Drop tiers', count: props.config.presets.gear.on ? '✓' : undefined, title: 'Which magic and rare gear shows, by rank, rarity and drop tier' },
-  ...(equipShown.value ? [] : [{ value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' }]),
   // Beta: shown with the experimental tools, or while this profile uses it.
-  ...(equipShown.value ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
-  ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame loot by what it is worth, class by class' }] : []),
+  { value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Decide endgame rares and flasks by a score you tune' },
+  { value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Show endgame loot by what it is worth, class by class' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
   { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'weights' && k !== 'currency' && k !== 'clusterPrices' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
-  { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
   // Price moves are changes to your filter too.
   { value: 'changes', label: 'Changes', count: props.config.edits.length + activePriceMoves.value }
@@ -617,6 +609,13 @@ const fileOptions = computed(() => {
 
 interface BannerAction { label: string, run: () => void, primary?: boolean }
 const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAction[] } | null>(() => {
+  const b = bannerOf()
+  // With the NeverSink tab gone, the banner is where an update is applied:
+  // a warning above it still offers Update.
+  if (b && props.store.updateReady.value && !b.actions.some(a => a.label === 'Update')) b.actions.push({ label: 'Update', run: updateNow })
+  return b
+})
+function bannerOf (): { text: string, tone: 'warn' | 'info', actions: BannerAction[] } | null {
   const s = props.store
   const failed = s.failed.value.length
   const review = { label: 'Review changes', run: () => { tab.value = 'changes' } }
@@ -639,10 +638,11 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
   if (s.problems.value.length) return { tone: 'warn', actions: [review], text: 'The game would reject this filter as it is. See Changes for the rule to fix.' }
   const ready = s.updateReady.value
   if (ready) {
+    const homeless = ready.total - ready.ok
     return {
       tone: 'info',
-      text: `NeverSink ${ready.version} is ready. ${ready.ok} of ${ready.total} of your changes fit.`,
-      actions: [{ label: 'What changed', run: () => { tab.value = 'neversink' } }, { label: 'Update', primary: true, run: updateNow }]
+      text: `NeverSink ${ready.version} is ready. ${ready.ok} of ${ready.total} of your changes fit${homeless ? ` (${homeless} will need a new home)` : ''}.`,
+      actions: [{ label: 'Update', primary: true, run: updateNow }]
     }
   }
   if (s.gameFilter.value.loaded === false) {
@@ -656,7 +656,7 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
     }
   }
   return null
-})
+}
 
 async function updateNow () {
   const undo = await props.store.updateNeverSink()
@@ -1098,6 +1098,12 @@ watch(tab, t => { if (focusTab && t !== focusTab) { focusTab = null; tabFocus.va
 
 watch(() => props.openTab, (t) => {
   if (!t) return
+  if (t.tab === 'weights') {
+    // Rare gear (What's new "Show me"), whichever Equipment section was open.
+    tabFocus.value = 'rares'; tab.value = 'weights'; nextTick(() => { tabFocus.value = null }).catch(() => {})
+    emit('tab-opened')
+    return
+  }
   tab.value = t.tab
   // Once: the editor is rebuilt each time it opens, and must not come back here.
   emit('tab-opened')
@@ -1559,7 +1565,7 @@ async function pickSource (key: string) {
   if (!key || key === sourceKey.value) return
   if (key === 'github') {
     await props.store.useGitHub(true)
-    tab.value = 'neversink'
+    tab.value = 'currency'
     return
   }
   if (props.config.neversink.on) props.config.neversink.on = false
@@ -1574,6 +1580,8 @@ async function pickSource (key: string) {
 async function refresh () {
   await props.store.listFiles()
   await props.store.load()
+  // The NeverSink tab's Check now lives here now.
+  if (props.config.neversink.on) props.store.checkForUpdate(true).catch(() => {})
 }
 
 function openFolder () {

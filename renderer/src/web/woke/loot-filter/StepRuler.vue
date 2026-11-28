@@ -6,6 +6,8 @@
     <div :class="$style.names">
       <span v-for="s in STEPS" :key="s" :class="[$style.name, { [$style.off]: isOff(s), [$style.cur]: edit === s }]"
         :style="{ left: `min(${at(s)}%, calc(100% - 4.5rem))`, top: s % 2 ? '0' : '26px' }">
+        <button v-if="toggles && s >= 1 && s <= 4" type="button" :class="[$style.eye, { [$style.eyeOff]: isOff(s) }]" role="switch" :aria-checked="!isOff(s)"
+          :aria-label="`Show ${CSTEP_NAMES[s]}`" :title="isOff(s) ? `${CSTEP_NAMES[s]} is off: click to show it` : `Click to hide ${CSTEP_NAMES[s]}`" :data-currency-step-dot="s" @click="emit('toggle', s)" />
         <button type="button" :class="$style.nameBtn" :title="title(s)" :aria-label="s === 0 ? 'Faint settings' : `${CSTEP_NAMES[s]} look and sound`" :aria-expanded="edit === s"
           :data-currency-step="s" @click="emit('edit', edit === s ? null : s)">
           <LabelPreview :text="s === 0 ? 'Faint' : CSTEP_NAMES[s]" :style-override="look(s)" visibility="Show" :extras="false" :scale="0.72" />
@@ -58,9 +60,11 @@ const props = defineProps<{
   gold?: boolean
   // The main ruler: its own prices even when the sample section has its own ruler.
   main?: boolean
+  // A dot by Small to Big that turns the step on or off here (Guy's H1).
+  toggles?: boolean
 }>()
 // Prices come back as shown (after Strictness); the tab turns them into yours.
-const emit = defineEmits<{ edit: [CStep | null], set: [step: number, chaos: number] }>()
+const emit = defineEmits<{ edit: [CStep | null], set: [step: number, chaos: number], toggle: [step: number] }>()
 
 const STEPS: CStep[] = [0, 1, 2, 3, 4, 5]
 const isOff = (s: CStep) => s === 0 ? !props.faintOn : props.off.includes(s)
@@ -149,7 +153,11 @@ const chaosText = (v: number) => {
 .nameBtn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; cursor: pointer; }
 .pen { font-size: var(--w-fs-xs); color: var(--w-accent, #c8a565); opacity: 0; transition: opacity .12s; }
 .nameBtn:hover .pen, .nameBtn:focus-visible .pen, .cur .pen { opacity: 1; }
-.off { opacity: .35; text-decoration: line-through; }
+.off .nameBtn { opacity: .35; text-decoration: line-through; }
+.name { display: inline-flex; align-items: center; gap: 4px; }
+.eye { width: 10px; height: 10px; border-radius: 50%; padding: 0; border: 1px solid var(--w-gold); background: var(--w-gold); cursor: pointer; flex: none; }
+.eye:hover, .eye:focus-visible { box-shadow: 0 0 0 2px var(--w-accent, #c8a565); outline: none; }
+.eyeOff { background: none; border-color: var(--w-faint); }
 .bar { position: relative; height: 14px; margin-top: 2px; }
 .seg { position: absolute; top: 0; bottom: 0; background: var(--c); border-right: 1px solid #000; }
 .segOff { background: repeating-linear-gradient(45deg, #2a2620 0 4px, #15130f 4px 8px); }

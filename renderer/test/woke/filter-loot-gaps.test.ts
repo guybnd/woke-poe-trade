@@ -74,8 +74,8 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     const big = matchItem(doc, facts('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 8 }))
     expect(big.final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
     expect(big.final?.block.comment).toMatch(/jewclus/)
-    // A 9-passive Large is the catch-all row: a guess under the line.
-    expect(matchItem(doc, facts('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 9 })).visibility).toBe('Hide')
+    // A 9-passive Large is the catch-all row: a guess, still shown (Always).
+    expect(matchItem(doc, facts('Large Cluster Jewel', 'Jewels', 'Rare', 84, { enchantmentPassiveNum: 9 })).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's1' })
     // Under NeverSink's cluster price rules, which still come first.
     const first = doc.blocks.findIndex(b => b.comment.includes('jewclus'))
     const eco = doc.blocks.findIndex(b => b.type === 'jewels->clustereco')
@@ -83,18 +83,18 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     expect(first).toBeGreaterThan(eco)
   })
 
-  it('heist gear shows from item level 83, unique contracts loud, corpses by name', () => {
+  it('heist gear louder from item level 83, unique contracts loud, corpses by name', () => {
     const lookup: PriceLookup = (g, base) => g.type === 'corpses' && base === 'Perfect Forest Tiger' ? { chaos: 80, thin: false } : null
     const doc = parseFilter(SEMI)
     applyCurrency(doc, on(), lookup)
     expect(matchItem(doc, facts('Whisper-woven Cloak', 'Heist Cloaks', 'Normal', 84)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's2' })
-    expect(matchItem(doc, facts('Whisper-woven Cloak', 'Heist Cloaks', 'Rare', 75)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Hide' })
+    expect(matchItem(doc, facts('Whisper-woven Cloak', 'Heist Cloaks', 'Rare', 75)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's1' })
     expect(matchItem(doc, facts('Master Lockpick', 'Heist Tools', 'Magic', 83)).visibility).toBe('Show')
     expect(matchItem(doc, facts('Contract: Bunker', 'Contracts', 'Unique', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
     expect(matchItem(doc, facts('Perfect Forest Tiger', 'Corpses', 'Normal', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
     // No price: a guess by grade.
     expect(matchItem(doc, facts('Perfect Warlord', 'Corpses', 'Normal', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
-    expect(matchItem(doc, facts('Imperfect Warlord', 'Corpses', 'Normal', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's1' })
+    expect(matchItem(doc, facts('Imperfect Warlord', 'Corpses', 'Normal', 83)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show', tier: 's1' })
   })
 
   it('life and mana flasks and tinctures by quality and item level', () => {

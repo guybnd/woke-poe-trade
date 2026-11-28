@@ -43,7 +43,7 @@ export const LEAGUE_IDS = new Set(LEAGUE_CATEGORIES.map(x => x.id))
 
 // Always by default (Guy, 2026-11-28): one drop a run, from an encounter you
 // chose to do, not ground litter, so price only lifts them above Small.
-export const LEAGUE_MODES: Record<string, SectionMode> = { lgchron: 'always', lgviscera: 'always', lgkeys: 'always', lgult: 'always', lgmerc: 'always', lgexped: 'always' }
+export const LEAGUE_MODES: Record<string, SectionMode> = { lgchron: 'always', lgviscera: 'always', lgkeys: 'always', lgult: 'always', lgmerc: 'always', lgexped: 'always', lgcorpse: 'always' }
 
 export const LEAGUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
   lgexped: { text: [220, 170, 120], color: 'Orange', shape: 'Pentagon' },
@@ -104,7 +104,7 @@ export const LEAGUE_ROWS: LeagueRow[] = [
   // it's worth crafting on only at item level 83+, where the top mods roll.
   ...HEIST_GEAR.flatMap(g => [
     { cat: 'lgheistgear', name: `${g.name}, item level 83+`, cls: g.cls, bts: [], tip: g.tip, guess: 1.5, conds: [NOT_UNIQUE, ilvl('>=', 83)] },
-    { cat: 'lgheistgear', name: `${g.name}, item level under 83`, cls: g.cls, bts: [], tip: g.tip, guess: 0.1, conds: [NOT_UNIQUE, ilvl('<', 83)] }
+    { cat: 'lgheistgear', name: `${g.name}, item level under 83`, cls: g.cls, bts: [], tip: g.tip, guess: 0.4, conds: [NOT_UNIQUE, ilvl('<', 83)] }
   ])
 ]
 

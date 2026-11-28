@@ -15,6 +15,7 @@ import type { Presets } from './presets'
 import { WEAPON_CLASSES } from './build-rules'
 import { allGearBases, baseInfo } from './gear-bases'
 import { lvConds } from './levelling'
+import { baseRankTable } from './base-ranks'
 
 export const LV_GEAR_TYPE = 'woke->levelling'
 
@@ -275,8 +276,14 @@ export function levellingGearBlocks (cfg: CurrencySettings, weapons: Presets['we
     const c = from(lo, hi)
     byRarity(c, plain, 2, `your weapons on a new base (area ${lo} to ${hi})`, [cond('Class', '==', mine), cond('DropLevel', '>=', [Math.max(1, lo - WEAPON_RECENT)])])
   }
-  if (notMine.length) push(lv && [...lv, cond('Rarity', '', plain), cond('Class', '==', notMine)], 0, 'white and blue gear for other builds', RARITY_RGB.Normal)
-  if (offBases.length) push(from(ACT_END[1] + 1) && [...from(ACT_END[1] + 1)!, cond('Rarity', '', plain), cond('BaseType', '==', offBases)], 0, 'white and blue armour in other defences', RARITY_RGB.Normal)
+  // Exotic bases (base ranks x1, x2) never hide here: the rules below
+  // (NeverSink's or our skeleton's) show them.
+  const ranks = baseRankTable()
+  const exotic = [...ranks.x1, ...ranks.x2]
+  const notExotic = exotic.length ? [cond('BaseType', '!=', exotic)] : []
+  const offPlain = offBases.filter(b => !exotic.includes(b))
+  if (notMine.length) push(lv && [...lv, cond('Rarity', '', plain), cond('Class', '==', notMine), ...notExotic], 0, 'white and blue gear for other builds', RARITY_RGB.Normal)
+  if (offPlain.length) push(from(ACT_END[1] + 1) && [...from(ACT_END[1] + 1)!, cond('Rarity', '', plain), cond('BaseType', '==', offPlain)], 0, 'white and blue armour in other defences', RARITY_RGB.Normal)
   // Your armour (and quivers for bows): every white and blue piece in Act 1,
   // then on a new base. NeverSink's levelling rules are off (retireNeverSink),
   // so what nothing here shows is hidden by its last layer.

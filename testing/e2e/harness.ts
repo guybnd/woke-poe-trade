@@ -233,6 +233,9 @@ export class Overlay {
     config.leagueId = 'Testleague'
     config.woke = { ...(config.woke ?? {}), setupDone: !opts.firstRun, off: opts.off ?? [] }
     if (!opts.tips) config.woke.hints = { off: true }
+    // A test's loot filter keeps the presets it was given: the one-time
+    // "Loot tab on for everyone" fix-up (Config.ts) is for real configs.
+    config.woke.lootOnByDefault = true
     // whatsNew: every line unseen, or just the ids listed.
     if (opts.whatsNew !== true) config.woke.seenNews = NEWS.map(n => n.id).filter(id => !(Array.isArray(opts.whatsNew) && opts.whatsNew.includes(id)))
     let nextId = Math.max(0, ...config.widgets.map((w: { wmId: number }) => w.wmId)) + 1
