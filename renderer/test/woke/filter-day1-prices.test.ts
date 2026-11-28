@@ -44,4 +44,13 @@ describe('day-1 prices', () => {
     expect(day1Applies('Standard', 'Covens', null, start)).toBe(false)
     expect(day1Applies('Next', '', start, start + day)).toBe(false)
   })
+
+  it('the typical price is the middle of the league after its first three days', async () => {
+    const { typical } = await import(/* @vite-ignore */ SCRIPT) as { typical: (p: Array<{ daysAgo: number, value: number }>) => number | null }
+    // Days 10..1: the first three (500, 400, 300) are left out.
+    const pts = [500, 400, 300, 9, 1, 5, 3, 7, 2, 4].map((value, i) => ({ daysAgo: 10 - i, value }))
+    expect(typical(pts)).toBe(4)
+    expect(typical([{ daysAgo: 2, value: 6 }, { daysAgo: 1, value: 2 }])).toBe(4)
+    expect(typical([])).toBeNull()
+  })
 })

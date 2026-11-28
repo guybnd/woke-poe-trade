@@ -35,6 +35,8 @@ import { BLIGHT_TYPE, MAP_CATEGORIES, MAP_IDS, MAP_KINDS, MAP_LOOK, SPECIAL_MAPS
 import type { GemBand, GemLine } from './gem-classes'
 import { CURRENCY_TYPE, CSTEP_NAMES } from './currency-settings'
 import type { CStep, CurrencySettings, ItemEdit, SectionMode } from './currency-settings'
+import { itemSource } from './own-lists'
+import type { OwnTables } from './own-lists'
 
 export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, FaintSettings, ItemEdit, SectionMode } from './currency-settings'
@@ -184,6 +186,9 @@ export interface CurrencyItem {
   // Several BaseTypes (a special map of any tier, "Any unique, 6-link"); `bt` is the one its tooltip shows.
   bts?: string[]
   conds?: FilterCondition[]
+  // No price can judge it (a jewel row): this step at any stack, 0 Off,
+  // until you set a step or a price (fixedOf).
+  fixed?: CStep
 }
 
 const SHARD_OF: Record<string, string> = {
@@ -229,10 +234,12 @@ function thinPrice (p: number, guess: number): number {
 // the player's own, when `edits` has one).
 // `cards`: each card's set size and reward fold (card-classes.ts), once read.
 // `gems`: poe.ninja's gem lines, each a band (gem-classes.ts).
-export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null): CurrencyItem[] {
+// `lists`: the Loot tab's own item lists and guesses (own-lists.ts), once read:
+// currency, fragments and cards come from them, not NeverSink's lists.
+export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null, lists: OwnTables | null = null): CurrencyItem[] {
   const seen = new Map<string, CurrencyItem>()
   const find = (type: string, name: string) => lookup?.(groupOf(type), name) ?? lookup?.(ANY_PAGE, name) ?? null
-  for (const b of doc.blocks) {
+  for (const b of itemSource(doc.blocks, lists, lookup, groupOf, ANY_PAGE)) {
     // NeverSink's fragment rules: league threads (Guy counts them as
     // currency) and the fragments (their own class on the Loot tab).
     const frags = b.type === 'fragments'
@@ -324,7 +331,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       const whole = orb ? (orb === 'Chaos Orb' ? 1 : find(b.type, orb)?.chaos) : undefined
       const p = whole != null && whole > 0 && !(listed != null && listed.chaos > 0 && listed.chaos <= whole / 20) ? { chaos: whole / 20, thin: false } : listed
       const priced = p != null && !p.thin && p.chaos > 0
-      const guess = tierGuess(b.tier)
+      // Last league's typical price, else (NeverSink's lists) its tier's.
+      const guess = lists?.guesses.get(name) ?? tierGuess(b.tier)
       const own = edits[name]?.price
       seen.set(name, {
         name,
@@ -510,7 +518,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     }
   }
   // Abyss and plain jewels (Guy's Jewels A, 2026-11-28): a row per rarity and
-  // item level band, each a guess you set the step or price of.
+  // item level band; most have a fixed step (no price can judge them), the
+  // low abyss bands a guess you set the step or price of.
   if (doc.blocks.some(b => b.type != null && JEWEL_TYPE.test(b.type))) {
     for (const j of JEWEL_ROWS) {
       const own = edits[j.name]?.price
@@ -524,6 +533,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         est: own == null,
         ...(own != null ? { own: true } : {}),
         full: 1,
+        ...(j.fixed != null ? { fixed: j.fixed } : {}),
         bt: j.bts[0],
         bts: j.bts,
         conds: j.conds.map(x => ({ ...x, values: [...x.values] }))
@@ -683,6 +693,11 @@ export function sizeCutNow (it: Pick<CurrencyItem, 'size' | 'cat'>, c: Pick<Curr
   return sizeCut(it.size)
 }
 
+// A row's fixed step while you haven't set a step, a price or By price on it.
+export function fixedOf (it: Pick<CurrencyItem, 'fixed'>, e: ItemEdit | undefined): CStep | undefined {
+  return e?.step == null && e?.price == null && !e?.priced && e?.supply == null ? it.fixed : undefined
+}
+
 export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number | null> {
   const e = c.items[it.name]
   if (e?.step != null) return [1, 2, 3, 4, 5].map(s => s === e.step ? 1 : null)
@@ -690,6 +705,8 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
   // Always; Always shows every pile at least Small.
   const mode = sectionMode(c, it.cat)
   if (mode === 'off' && e?.supply !== 1 && !e?.min) return [null, null, null, null, null]
+  const fx = fixedOf(it, e)
+  if (fx != null && !(fx === 0 && mode === 'always')) return [1, 2, 3, 4, 5].map(s => s === fx ? 1 : null)
   const cut = sizeCutNow(it, c)
   const worth = cut < 1 ? { ...it, chaos: it.chaos * cut } : it
   const out = it.type === 'gold' ? [...c.gold] as Array<number | null> : stepStarts(c, it.cat).map(at => minStack(worth, at, c.from[1]))
@@ -710,9 +727,10 @@ export function stacksFor (it: CurrencyItem, c: CurrencySettings): Array<number 
 
 // Hidden by hand, so never Faint either: the item's own Off, or its
 // category's Off without the item's own Always.
-export function forcedHidden (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'catMode'>): boolean {
+export function forcedHidden (it: Pick<CurrencyItem, 'name' | 'cat' | 'fixed'>, c: Pick<CurrencySettings, 'items' | 'catMode'>): boolean {
   const e = c.items[it.name]
-  return e?.step === 0 || (sectionMode(c, it.cat) === 'off' && e?.supply !== 1 && e?.step == null && !e?.min)
+  const mode = sectionMode(c, it.cat)
+  return e?.step === 0 || (mode === 'off' && e?.supply !== 1 && e?.step == null && !e?.min) || (fixedOf(it, e) === 0 && mode !== 'always')
 }
 
 // The Strictness multiplier in force: the player's own, or the filter's level's.
@@ -738,9 +756,9 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 
 // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
 // quieter step) for this item: never its own step or its Collecting floor.
-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
+export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
-  if (e?.step != null) return []
+  if (e?.step != null || fixedOf(it, e)) return []
   // A section set Always (Chase uniques, Boss drops by default) shows
   // whatever steps are turned off (Guy 2026-11-28: chase bases hid with
   // Small and Normal off).
@@ -1077,10 +1095,10 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
 
 // Writes the rules above everything else in the filter (like the rare
 // weights: build rules, presets and your own rules then go on top).
-export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null): CurrencyCompiled | null {
+export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: PriceLookup | null, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null, lists: OwnTables | null = null): CurrencyCompiled | null {
   // Without prices every item would be a guess: leave it to NeverSink.
   if (!cfg.on || !lookup) return null
-  const all = currencyItems(doc, lookup, cfg.items, cards, gems)
+  const all = currencyItems(doc, lookup, cfg.items, cards, gems, lists)
   if (!all.length) return null
   const eff = scaled(cfg, doc.strictness)
   const faint = faintOn(cfg, doc.strictness)
