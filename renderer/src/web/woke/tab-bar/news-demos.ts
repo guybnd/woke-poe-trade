@@ -37,7 +37,22 @@ Perfect Hydra
 Item Level: 84
 `
 
+// A divination card as the game copies it.
+export const DOCTOR_CARD = `Item Class: Divination Cards
+Rarity: Divination Card
+The Doctor
+--------
+Stack Size: 1/8
+--------
+Headhunter
+Leather Belt
+--------
+A mind unfettered, a body freed of shackles.
+`
+
 export const NEWS_DEMOS: Record<string, NewsDemo> = {
+  // A divination card: its full set's reward on the quick price card.
+  'price-check-card-set': { check: { name: 'The Doctor', text: DOCTOR_CARD }, spot: 'card-set' },
   // A corpse: the quick price card (the window when poe.ninja has no row).
   'price-check-corpse-card': { check: { name: 'Perfect Hydra', text: CORPSE_ITEM }, spot: 'ninja-card' },
   'price-check-seller-spread': { check: { name: 'Exalted Orb' }, spot: 'seller-spread' },

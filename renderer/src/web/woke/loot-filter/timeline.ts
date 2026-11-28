@@ -38,6 +38,9 @@ export const TIMELINE_SIZE = 50
 // It's written to its own file after each change and held in memory; steps
 // with many price moves are big (two applies of 100+ moves ~ 30 KB).
 export const TIMELINE_MAX_CHARS = 500_000
+// Preset changes to the same values this close together are one step: a
+// slider dragged or a number typed in bursts, so Undo takes it all back.
+export const TIMELINE_MERGE_MS = 5000
 
 const KEYS: Array<keyof Settings> = ['edits', 'rules', 'presets', 'moves', 'locks']
 
@@ -101,6 +104,26 @@ export function measureSteps (t: Timeline): void {
   t.steps.forEach(stepSize)
 }
 
+// Where two values differ, as paths ("currency.rulers.essences.1"), or null
+// when anything but a number changed (a toggle, a list gaining an entry).
+export function numberPaths (a: unknown, b: unknown, path = '', out: string[] = []): string[] | null {
+  if (same(a, b)) return out
+  if (typeof a === 'number' && typeof b === 'number') {
+    out.push(path)
+    return out
+  }
+  const obj = (x: unknown) => x != null && typeof x === 'object' && !Array.isArray(x)
+  const arr = (x: unknown): x is unknown[] => Array.isArray(x)
+  // Arrays only as fixed rows of numbers (a ruler), never as sets.
+  if ((obj(a) && obj(b)) || (arr(a) && arr(b) && a.length === b.length)) {
+    for (const k of new Set([...Object.keys(a as object), ...Object.keys(b as object)])) {
+      if (!numberPaths((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k], `${path}.${k}`, out)) return null
+    }
+    return out
+  }
+  return null
+}
+
 export function observe (t: Timeline, before: Settings, after: Settings, label: string, now = Date.now()): Timeline {
   const parts = changedParts(before, after)
   if (!parts.length) return t
@@ -110,6 +133,16 @@ export function observe (t: Timeline, before: Settings, after: Settings, label: 
   if (last && only(last) && same3(after, last.before) && same3(before, last.after)) return { ...t, at: t.at - 1 }
   const next = t.steps[t.at]
   if (next && only(next) && same3(after, next.after) && same3(before, next.before)) return { ...t, at: t.at + 1 }
+  // The same preset values moved again straight away: the last step grows.
+  if (last && t.at === t.steps.length && now - last.ts >= 0 && now - last.ts < TIMELINE_MERGE_MS &&
+    parts.length === 1 && parts[0] === 'presets' && Object.keys(last.before).join() === 'presets' && same3(before, last.after)) {
+    const was = numberPaths(last.before.presets, last.after.presets)?.sort().join()
+    if (was && was === numberPaths(before.presets, after.presets)?.sort().join()) {
+      const grown: TimelineStep = { ts: now, label, before: last.before, after: pick(after, parts) }
+      const steps = [...t.steps.slice(0, t.at - 1), grown]
+      return { steps, at: steps.length }
+    }
+  }
   const step: TimelineStep = { ts: now, label, before: pick(before, parts), after: pick(after, parts) }
   let steps = [...t.steps.slice(0, t.at), step].slice(-TIMELINE_SIZE)
   // The list as JSON is the steps plus commas and brackets.
