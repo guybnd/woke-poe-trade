@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter (beta): Base ranks folds families of bases (Talismans, Runic, Heist gear, Breach and Lake rings, Ritual gear, Crowns and masks) into one row per column. Drag the row to move the whole family, or click it to open and drag single bases out.
 - Loot filter (beta): Base ranks splits Exotic in two. Exotic, valuable holds the exotic bases worth about a divine or more (NeverSink's top exotic tiers: talismans, Simplex Amulet, Cogwork and Dusk Rings and more), Exotic the rest. Drag a base between them to change it. On Equipment › Rare gear the valuable ones score higher, as before, and now look like Tink: magenta text and border on a white background. The other exotics keep rose text.
 - Loot filter (beta): each class has its own minimap icon shape, so the shape alone tells you what dropped: currency circle, fragments kite, cards diamond, uniques star, gems triangle, maps square, jewels raindrop, league items pentagon, gold moon, rare gear hexagon. The Never hide value net uses a house. Colours still tell the sections apart. A shape you picked yourself for a section stays.
 - Loot filter (beta): Gold has its own page on the Loot tab, right under Currency, with its pile size ruler at the top. Each class on the Loot tab's list shows its item art instead of a coloured square.

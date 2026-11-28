@@ -1313,6 +1313,18 @@ test('Base ranks: drag a base, then the picked set, onto another column', async 
   for (const n of [a, b]) await expect(card('never', n)).toBeVisible()
   await expect(page.getByText('2 picked')).toHaveCount(0)
   await overlay.snap('dragged to Never')
+
+  // A family folds into one row: drag it to move every base in it, open it to
+  // move one.
+  const talismans = lane('exotichi').locator('[data-family="talisman"]')
+  await expect(talismans).toBeVisible()
+  await talismans.click()
+  await expect(talismans).toHaveAttribute('aria-expanded', 'true')
+  await overlay.snap('talismans opened in Exotic, valuable')
+  await talismans.dragTo(lane('exotic'), { targetPosition: { x: 40, y: 12 } })
+  await expect(lane('exotic').locator('[data-family="talisman"]')).toBeVisible()
+  await expect(lane('exotichi').locator('[data-family="talisman"]')).toHaveCount(0)
+  await overlay.snap('talismans moved to Exotic')
 })
 
 test('Currency weights: Alt + F on currency shows its step first, a Shows switch, the step ruler and a Price bias', async ({ overlay, fakeApp }) => {
