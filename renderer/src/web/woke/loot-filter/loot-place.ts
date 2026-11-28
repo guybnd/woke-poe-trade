@@ -8,6 +8,7 @@ import type { CurrencyItem } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
+import { clusterPricesFor } from './cluster-ninja'
 import { gemItemFor, itemFor, notItsRarity } from './loot-focus'
 import { evalCondition } from './match'
 import type { ItemFacts } from './item-facts'
@@ -25,7 +26,7 @@ export function lootPlaceOf (store: LootFilterStore, facts: ItemFacts, block: Fi
   loadOwnTables()
   const name = facts.baseType ?? facts.name
   const gem = / Gems$/.test(facts.itemClass ?? '') ? { level: facts.gemLevel ?? 1, quality: facts.quality ?? 0, corrupted: !!facts.corrupted } : null
-  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gem ? gemLinesOf(store.prices.items.value) : null, ownTables.value)
+  const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gem ? gemLinesOf(store.prices.items.value) : null, ownTables.value, clusterPricesFor(store.prices.currentLeague.value))
   const it: CurrencyItem | null | undefined = gem
     ? gemItemFor(all, name, gem, block.conditions)
     : [itemFor(all, name, block.conditions)].find(i => i && !notItsRarity(i, facts.rarity)) ?? all

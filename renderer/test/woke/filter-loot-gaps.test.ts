@@ -59,7 +59,7 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
   })
 
   it('cluster jewel bands priced by the cheapest of their kind, money enchants get rows above the NeverSink price rules', () => {
-    const L = (passives: number, ilvl: number, node: string, chaos: number, listings = 20) => ({ size: 'Large', passives, ilvl, node, chaos, listings })
+    const L = (passives: number, ilvl: number, node: string, chaos: number, listings = 20) => ({ size: 'Large' as const, passives, ilvl, node, chaos, listings })
     const lines = [
       L(8, 84, 'Chaos Damage', 100),
       L(8, 84, 'Fire Damage', 6),
@@ -86,15 +86,22 @@ describe('Loot sections for NeverSink\'s last gaps', () => {
     const jewel = (passives: number, ilvl: number, node?: string) => facts('Large Cluster Jewel', 'Jewels', 'Rare', ilvl, { enchantmentPassiveNum: passives, enchantPassiveNodes: node ? [node] : [] })
     // The money enchant is loud; another enchant on the same band is the band's price.
     expect(matchItem(doc, jewel(12, 84, 'Minion Damage')).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
-    expect(matchItem(doc, jewel(8, 84, 'Fire Damage')).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's3' })
-    expect(matchItem(doc, jewel(8, 84, 'Fire Damage')).final?.block.comment).toMatch(/jewclus/)
+    // A type NeverSink's price rules name and we have no row for: theirs.
+    expect(matchItem(doc, jewel(8, 84, 'Fire Damage')).final?.block).toMatchObject({ type: 'jewels->clustereco' })
+    // Any other type: the band row, at the band's price.
+    expect(matchItem(doc, jewel(10, 84, 'Wand Damage')).final?.block.comment).toMatch(/jewclus/)
     // A 9-passive Large: a guess, still shown (Always).
     expect(matchItem(doc, jewel(9, 84)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show' })
-    // Above NeverSink's cluster price rules, which stay below for the rest.
-    const first = doc.blocks.findIndex(b => b.comment.includes('jewclus'))
+    // Enchant rows above NeverSink's cluster price rules; band rows under
+    // them, so those rules still catch a passive type without a row.
+    const ench = doc.blocks.findIndex(b => b.comment.includes('jewclus') && b.conditions.some(c => c.key === 'EnchantmentPassiveNode'))
+    const band = doc.blocks.findIndex(b => b.comment.includes('jewclus') && !b.conditions.some(c => c.key === 'EnchantmentPassiveNode'))
     const eco = doc.blocks.findIndex(b => b.type === 'jewels->clustereco')
     expect(eco).toBeGreaterThanOrEqual(0)
-    expect(first).toBeLessThan(eco)
+    expect(ench).toBeLessThan(eco)
+    expect(band).toBeGreaterThan(eco)
+    // A type poe.ninja prices only under 84 gets no row there.
+    expect(clusterEnchantRows([L(8, 84, 'Fire Damage', 6), L(8, 68, 'Cold Damage', 2), L(8, 68, 'Wand Damage', 40)]).map(r => r.name)).toEqual([])
   })
 
   it('heist gear louder from item level 83, unique contracts loud, corpses by name', () => {

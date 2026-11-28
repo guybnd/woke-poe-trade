@@ -616,7 +616,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   // of the band on poe.ninja, else a guess, and a row for each money enchant.
   const enchants = clusters?.length ? clusterEnchantRows(clusters) : []
   for (const r of [...enchants, ...CLUSTER_ROWS]) {
-    const floor = 'chaos' in r ? r.chaos : clusters?.length ? clusterFloor(r, clusters) : null
+    const floor: number | null = 'chaos' in r ? (r as { chaos: number }).chaos : clusters?.length ? clusterFloor(r, clusters) : null
     const own = edits[r.name]?.price
     seen.set(r.name, {
       name: r.name,
@@ -1407,9 +1407,14 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec' && it.cat !== SIXLINK_CAT && it.cat !== 'uniqrep'), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels' && it.cat !== 'jewclus'), faint) ?? none
-  // Cluster rows above NeverSink's cluster price and base rules, which stay
-  // below for whatever ours leave (an Off row, a passive type not listed).
-  const clus = applyAt(doc, eff, all.filter(it => it.cat === 'jewclus'), faint, b => b.type === CLUSTER_PRICE_RULES || b.type === CLUSTER_BASE_TYPE, true) ?? none
+  // Cluster jewels: the money enchant rows above NeverSink's cluster price
+  // rules, so they win; the band rows under them, as before, so those rules
+  // (and the Rules tab's Cluster page) still catch a valuable passive type
+  // poe.ninja has no row for (no prices yet, thin listings).
+  const isEnchant = (it: CurrencyItem) => it.cat === 'jewclus' && it.conds?.some(c => c.key === 'EnchantmentPassiveNode') === true
+  const clusEnch = applyAt(doc, eff, all.filter(isEnchant), faint, b => b.type === CLUSTER_PRICE_RULES || b.type === CLUSTER_BASE_TYPE, true) ?? none
+  const clusBand = applyAt(doc, eff, all.filter(it => it.cat === 'jewclus' && !isEnchant(it)), faint, b => b.type === CLUSTER_BASE_TYPE, true, b => b.type === CLUSTER_PRICE_RULES) ?? none
+  const clus = { blocks: [...clusEnch.blocks, ...clusBand.blocks], items: [...clusEnch.items, ...clusBand.items], chars: clusEnch.chars + clusBand.chars }
   // Flasks above NeverSink's flask rules and the quality flask recipe, so the
   // recipe's Small never caps a 30% flask.
   const flasks = applyAt(doc, eff, all.filter(it => it.type === 'flasks'), faint, b => (b.type != null && FLASK_RULE_TYPE.test(b.type)) || (b.type === CURRENCY_TYPE && /: recipe: /.test(b.comment)), true) ?? none
