@@ -31,7 +31,7 @@ import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
 import { FOULBORN_PREFIX, FOULBORN_TYPE, REPLICA_GUESS, REPLICA_PREFIX, REPLICA_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
-import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, corpseGuess } from './league-classes'
+import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS, WOMBGIFTS, corpseGuess, wombgiftGuess } from './league-classes'
 import { CLUSTER_BASE_TYPE, CLUSTER_ROWS, JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE, clusterFloor } from './jewel-classes'
 import { FLASK_CATEGORIES, FLASK_IDS, FLASK_LOOK, FLASK_ROWS, FLASK_RULE_TYPE } from './flask-classes'
 import type { ClusterPrice } from './cluster-prices'
@@ -363,8 +363,10 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
-        // Odd items with no solid price (none, or a thin one) always show.
-        ...(!card && own == null && !priced && isFree(name, b.type, b.tier) ? { free: true } : {}),
+        // Odd items with no solid price (none, or a thin one) always show, and
+        // so does one with no price now or last league (Guy 2026-11-28: it
+        // used to fall to our fallback rule, which showed it).
+        ...(own == null && (!priced || (orb != null && !(listed != null && listed.chaos > 0))) && ((!card && isFree(name, b.type, b.tier)) || (lists != null && !lists.guesses.has(name) && !(listed != null && listed.chaos > 0))) ? { free: true } : {}),
         // Fragments don't stack: one is the whole pile. A card's pile is at
         // most a set (10 until the sizes are read).
         full: card ? cards?.get(name)?.stack ?? 10 : frags && !thread ? 1 : fullStack(name)
@@ -649,31 +651,37 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
     })
   }
-  // Corpses (M4a): priced by name; the names from the game data's lists,
-  // else the filter's own corpse rules.
-  {
-    const fromLists = lists?.lists.filter(r => r[1] === 'Corpses').map(r => r[0]) ?? []
-    const names = fromLists.length ? fromLists : [...new Set(doc.blocks.filter(b => b.type === 'corpses').flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
-    const group = groupOf('corpses')
+  // Corpses (M4a) and Wombgifts (Guy 2026-11-28: they only had our fallback
+  // rule, so Alt+F showed the old card): priced by name; the names from the
+  // game data's lists, else the filter's own rules, else a known list.
+  const byName = (cls: string, cat: string, groupType: string | EconomyGroup, guessOf: (name: string) => number, fallback: string[]) => {
+    const fromLists = lists?.lists.filter(r => r[1] === cls).map(r => r[0]) ?? []
+    const fromRules = typeof groupType !== 'string' ? [] : [...new Set(doc.blocks.filter(b => b.type === groupType).flatMap(b => b.conditions.find(x => x.key === 'BaseType' && (x.op === '==' || x.op === '='))?.values ?? []))]
+    const names = fromLists.length ? fromLists : fromRules.length ? fromRules : fallback
+    const group = typeof groupType === 'string' ? groupOf(groupType) : groupType
     for (const name of names) {
       if (seen.has(name)) continue
       const p = lookup?.(group, name) ?? null
       const priced = p != null && !p.thin && p.chaos > 0
-      const guess = corpseGuess(name)
+      const guess = guessOf(name)
       const own = edits[name]?.price
       seen.set(name, {
         name,
-        cls: 'Corpses',
+        cls,
         type: 'league',
         tier: null,
-        cat: 'lgcorpse',
+        cat,
         chaos: (own ?? (priced ? p.chaos : p != null && p.chaos > 0 ? thinPrice(p.chaos, guess) : guess)) * (edits[name]?.mult ?? 1),
         est: own == null && (!priced || Boolean(p?.day1)),
         ...(own != null ? { own: true } : {}),
+        // No price at all: it always shows, as our fallback rule showed it.
+        ...(own == null && !(p != null && p.chaos > 0) ? { free: true } : {}),
         full: 1
       })
     }
   }
+  byName('Corpses', 'lgcorpse', 'corpses', corpseGuess, [])
+  byName('Wombgifts', 'lgwomb', 'wombgifts', wombgiftGuess, WOMBGIFTS)
   // Special gear (special-gear.ts): a row per thing a filter can see (a
   // mod's name, fractured, influence...), each at a fixed step you can change.
   for (const r of SPECIAL_ROWS) setRow(r, 'special', r.tip)
@@ -735,6 +743,15 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       ...(own != null ? { own: true } : {}),
       full: 1
     })
+  }
+  // Viscera and Reliquary keys the base filter's tiers didn't list (our own
+  // skeleton has none): a row each from the game data, priced by name
+  // (Guy 2026-11-28: every item gets a Loot row, so Alt+F's Loot card).
+  if (lists?.lists.length) {
+    for (const sec of LEAGUE_PRICED) {
+      const cls = sec.cat === 'lgkeys' ? 'Vault Keys' : sec.cls
+      byName(cls, sec.cat, { type: sec.cat, label: sec.cat, ninja: sec.ninja }, () => sec.guess(null), [])
+    }
   }
   return [...seen.values()]
 }

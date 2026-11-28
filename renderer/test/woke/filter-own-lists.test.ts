@@ -42,14 +42,16 @@ describe('own item lists', () => {
     expect(cls.every(x => /Resonator: Delve Stackable Socketable Currency$/.test(x))).toBe(true)
   })
 
-  it('gives no row to what no longer drops, unless last league priced it', () => {
+  it('gives every item a row but the ones that no longer drop, unless priced', () => {
     const lookup: PriceLookup = (_g, base) => base === 'Divine Orb' ? { chaos: 200, thin: false } : null
     const names = (t: OwnTables) => plain(currencyItems(doc, lookup, {}, null, null, t)).map(i => i.name)
     expect(names(tables())).toContain('Divine Orb')
     expect(names(tables())).not.toContain('Simple Sextant')
     // No guesses read yet: what the base filter lists keeps its row.
     expect(names(tables())).toContain('Orb of Unmaking')
-    expect(names(tables({ 'Divine Orb': 200 }))).not.toContain('Orb of Unmaking')
+    // Unpriced now and last league: still a row (Guy 2026-11-28: Alt+F's Loot card).
+    expect(names(tables({ 'Divine Orb': 200 }))).toContain('Orb of Unmaking')
+    expect(names(tables({ 'Divine Orb': 200 }))).not.toContain('Simple Sextant')
     expect(names(tables())).not.toContain('Abyss Scarab')
     expect(names(tables({ 'Orb of Binding': 0.5 }))).toContain('Orb of Binding')
   })
@@ -62,7 +64,7 @@ describe('own item lists', () => {
 
   it('keeps NeverSink\'s lists without prices', () => {
     // Corpses come from the game's list either way, which has more than NeverSink's.
-    const names = (xs: ReturnType<typeof currencyItems>) => xs.filter(i => i.cat !== 'lgcorpse').map(i => i.name)
+    const names = (xs: ReturnType<typeof currencyItems>) => xs.filter(i => !['lgcorpse', 'lgviscera', 'lgkeys'].includes(i.cat)).map(i => i.name)
     expect(names(currencyItems(doc, null, {}, null, null, tables()))).toEqual(names(currencyItems(doc, null)))
   })
 
