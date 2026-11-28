@@ -1,7 +1,7 @@
 // Day-1 prices: they fill in only what the live prices lack, marked as day-1,
 // and the script takes the middle of a league's first three days.
 import { describe, expect, it } from 'vitest'
-import { withDay1 } from '@/web/woke/loot-filter/day1-prices'
+import { day1Applies, withDay1 } from '@/web/woke/loot-filter/day1-prices'
 import type { Day1Table } from '@/web/woke/loot-filter/day1-prices'
 import { priceLookup } from '@/web/woke/loot-filter/economy'
 
@@ -33,5 +33,15 @@ describe('day-1 prices', () => {
     expect(firstDays(pts)).toBe(7)
     expect(firstDays([{ daysAgo: 3, value: 2 }])).toBe(2)
     expect(firstDays([])).toBeNull()
+  })
+
+  it('applies only in another league\'s first week', () => {
+    const start = Date.parse('2027-03-06T20:00:00Z')
+    const day = 86400e3
+    expect(day1Applies('Next', 'Covens', start, start + day)).toBe(true)
+    expect(day1Applies('Covens', 'Covens', start, start + day)).toBe(false)
+    expect(day1Applies('Next', 'Covens', start, start + 8 * day)).toBe(false)
+    expect(day1Applies('Standard', 'Covens', null, start)).toBe(false)
+    expect(day1Applies('Next', '', start, start + day)).toBe(false)
   })
 })
