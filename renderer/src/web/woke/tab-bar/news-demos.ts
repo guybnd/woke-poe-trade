@@ -52,7 +52,6 @@ export const NEWS_DEMOS: Record<string, NewsDemo> = {
   // A Timeless jewel: its conquerors' keystones in the side list.
   'price-check-conquest-keystones': { check: { name: 'Elegant Hubris', rarity: 'unique' }, spot: 'related' },
   // A Shaper's Exalted Orb: its family and two fragment groups, folded to fit.
-  'related-folded-groups': { check: { name: "Shaper's Exalted Orb" }, spot: 'related' },
   // A unique with two Foulborn kinds and a Vestigial mod.
   'price-check-unique-foulborn': { check: { name: 'Carcass Jack', rarity: 'unique' }, spot: 'foulborn' },
   // A unique: its drop tier (and its loot filter tier, with a filter loaded) heads the side list.
