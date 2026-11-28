@@ -1,5 +1,5 @@
 // Currency weights' settings (beta): the line, where each louder step starts,
-// per-category nudges and per-item edits. Kept apart from the compiler
+// per-section price bias and per-item edits. Kept apart from the compiler
 // (currency-weights.ts) so the saved config doesn't pull it in at startup.
 import { isPatch } from './edits'
 import type { StylePatch } from './edits'
@@ -9,8 +9,10 @@ export const CURRENCY_TYPE = 'woke->currency'
 // The line: a pile worth less than this (in chaos, after the stack bias) hides.
 export const LINE_MIN = 0.1
 export const LINE_MAX = 10
-// A category's strictness: each notch ×1.25 (stricter) or ÷1.25 on every step's price.
-export const NUDGE_MAX = 4
+// A Price bias, in % of the price (Guy 2026-11-28: 0.2 to 3x, 5% steps or 1%):
+// a section's (every item in it) or an item's own.
+export const BIAS_MIN = 20
+export const BIAS_MAX = 300
 // The strictness multiplier on every step's price (Guy 2026-11-27): it
 // follows NeverSink's strictness, ×1.25 a level, until set by hand in 0.05s.
 export const MULT_MIN = 0.25
@@ -28,7 +30,7 @@ export interface ItemEdit {
   price?: number
   // Always shown (at least Small) from this stack: crafting supplies.
   supply?: number
-  // Worth ×: a bonus or penalty on its price (MULT_MIN to MULT_MAX).
+  // Its Price bias as a factor on its price (0.2 to 3 from the slider).
   mult?: number
   // Its own look, on top of its step's.
   look?: StylePatch
@@ -45,8 +47,9 @@ export interface CurrencySettings {
   line: number
   // Normal, Decent, Big and Tink start at these many chaos, whatever the line.
   from: [number, number, number, number]
-  // Category id → notches: +1 sees less (line ×2), −1 sees more (line ÷2).
-  nudge: Record<string, number>
+  // Section id → its Price bias: every item in it counts at this % of its
+  // price (100 is left out). Saved before 2026-11-28 as notches (`nudge`).
+  bias: Record<string, number>
   items: Record<string, ItemEdit>
   // A step's look changed by hand ('1'..'5'), on top of the built-in one.
   steps: Record<string, StylePatch>
@@ -104,7 +107,7 @@ export function toggleNotAvg (c: Pick<CurrencySettings, 'notAvg'>, name: string)
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: { all: [] }, rulers: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], bias: {}, items: {}, steps: {}, cats: {}, offBy: { all: [] }, rulers: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -129,7 +132,7 @@ export function normalizeItemEdit (e: unknown): ItemEdit | null {
   if (price != null) out.price = price
   const supply = int(x.supply, 1, 100_000)
   if (supply != null) out.supply = supply
-  const mult = num(x.mult, MULT_MIN, MULT_MAX)
+  const mult = num(x.mult, BIAS_MIN / 100, MULT_MAX)
   if (mult) out.mult = mult
   if (x.look && isPatch(x.look)) out.look = x.look as StylePatch
   const min = int(x.min, 1, 5)
@@ -165,12 +168,11 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
   }
   // Each step starts at or above the one below it.
   for (let i = 1; i < 4; i++) from[i] = Math.max(from[i], from[i - 1])
-  const nudge: Record<string, number> = {}
-  if (c?.nudge && typeof c.nudge === 'object') {
-    for (const [k, v] of Object.entries(c.nudge)) {
-      if (/^[a-z]{1,20}$/.test(k) && v && int(v, -NUDGE_MAX, NUDGE_MAX) != null) nudge[k] = v as number
-    }
-  }
+  // Old notches: one up made every step cost ×1.25, so its items counted at 80%.
+  const old = (c as { nudge?: unknown } | undefined)?.nudge
+  const src = c?.bias && typeof c.bias === 'object' ? c.bias : old && typeof old === 'object' ? Object.fromEntries(Object.entries(old).map(([k, n]) => [k, int(n, -4, 4) != null ? Math.round(100 * 1.25 ** -n) : 0])) : {}
+  const bias: Record<string, number> = {}
+  for (const [k, v] of Object.entries(src)) if (/^[a-z]{1,20}$/.test(k) && v !== 100 && int(v, BIAS_MIN, BIAS_MAX) != null) bias[k] = v as number
   const items: Record<string, ItemEdit> = {}
   if (c?.items && typeof c.items === 'object') {
     for (const [n, e] of Object.entries(c.items)) {
@@ -182,7 +184,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     on: typeof c?.on === 'boolean' ? c.on : false,
     line: num(c?.line, LINE_MIN, LINE_MAX) ?? d.line,
     from,
-    nudge,
+    bias,
     items,
     steps: patches(c?.steps, /^[1-5]$/),
     cats: patches(c?.cats, /^[a-z]{1,20}$/),

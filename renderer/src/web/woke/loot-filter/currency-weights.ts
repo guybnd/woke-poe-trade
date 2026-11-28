@@ -6,7 +6,7 @@
 // A pile counts as chaos each × stack; an item whose full stack is worth
 // less than Decent counts × stack^0.75 instead (Guy 2026-11-27). Under the line it hides; over it it shows Small,
 // and Normal, Decent, Big and Tink start at fixed prices whatever the line.
-// Each category can nudge the line; each item can be set by hand: its step,
+// Each section can have a Price bias; each item can be set by hand: its step,
 // its price, a supply stack, its own look.
 //
 // The items are the ones NeverSink tiers as currency, essences, fossils,
@@ -41,7 +41,7 @@ import { itemSource } from './own-lists'
 import type { OwnTables } from './own-lists'
 import { ownBottom, ownUniqueSpecials } from './own-base'
 
-export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, NUDGE_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
+export { CURRENCY_TYPE, CSTEP_NAMES, FAINT_UNTIL, LINE_MIN, LINE_MAX, BIAS_MIN, BIAS_MAX, MULT_MIN, MULT_MAX, defaultCurrency, normalizeCurrency } from './currency-settings'
 export type { CStep, CurrencySettings, FaintSettings, ItemEdit, SectionMode } from './currency-settings'
 
 // NeverSink's currency types this step covers.
@@ -655,18 +655,17 @@ export function scaled (c: CurrencySettings, strictness: string | null): Currenc
   return { ...c, sizeOn, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))), rulers: Object.fromEntries(Object.entries(c.rulers ?? {}).map(([k, r]) => [k, r.map(v => v * m)])) }
 }
 
-// The line for a category, after its nudge.
-// A category's own strictness (Guy 2026-11-27): each notch ×1.25 (or ÷),
-// on top of the main multiplier, on every step's price.
-export const catMult = (c: Pick<CurrencySettings, 'nudge'>, cat: string): number => 1.25 ** (c.nudge[cat] ?? 0)
-export function catLine (c: Pick<CurrencySettings, 'line' | 'nudge'>, cat: string): number {
+// The line for a category, after its Price bias: items counting at 125% is
+// the same as every step's price at 1/1.25, on top of Strictness.
+export const catMult = (c: Pick<CurrencySettings, 'bias'>, cat: string): number => 100 / (c.bias?.[cat] ?? 100)
+export function catLine (c: Pick<CurrencySettings, 'line' | 'bias'>, cat: string): number {
   return c.line * catMult(c, cat)
 }
 
 // Where each step 1..5 starts, in chaos, with the category's strictness:
 // Small at the line, the louder ones at their own price, never under it.
 // A section with its own ruler starts its steps there, without its bias.
-export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers'>>, cat = ''): number[] {
+export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'bias'> & Partial<Pick<CurrencySettings, 'rulers'>>, cat = ''): number[] {
   const own = c.rulers?.[cat]
   if (own) return own.map(v => Math.max(own[0], v))
   const k = catMult(c, cat)
@@ -1252,7 +1251,7 @@ export function recipeWorth (lookup: PriceLookup | null, id: RecipeId, edits: Re
   const p = e?.price ?? basePrice(lookup, 'currency', r.art)
   return p == null ? null : p * (e?.mult ?? 1) * r.count
 }
-type PriceSteps = Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers' | 'items' | 'offBy' | 'catMode'>>
+type PriceSteps = Pick<CurrencySettings, 'line' | 'from' | 'bias'> & Partial<Pick<CurrencySettings, 'rulers' | 'items' | 'offBy' | 'catMode'>>
 // The step that price reaches, Small to Big, on the steps of the reward's
 // currency section (its strictness and bias too): Off under the line, and
 // Off on a step turned off there, as the reward itself hides. `c`: the
