@@ -129,8 +129,8 @@ function toggle (r: Row, on: boolean) {
 .tl { display: grid; grid-template-columns: 22px minmax(8rem, 11rem) minmax(0, 1fr); gap: 3px 8px; align-items: center; }
 .tlName { font-size: var(--w-fs-sm); color: #e2d3ad; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .axis { display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); font-size: var(--w-fs-xs); color: var(--w-dim); text-align: center; }
-.bar { height: 18px; display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--w-line); border-radius: 2px; }
-.seg { height: 100%; font-size: 11px; line-height: 16px; text-align: center; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #120e0a; }
+.bar { height: calc(18px * var(--w-text-scale, 1)); display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--w-line); border-radius: 2px; }
+.seg { height: 100%; font-size: var(--w-fs-xs); line-height: calc(16px * var(--w-text-scale, 1)); text-align: center; font-weight: 600; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #120e0a; }
 .seg + .seg { border-left: 1px solid rgba(0, 0, 0, 0.6); }
 .big { background: #f0a848; }
 .decent { background: #ddd3bf; }
