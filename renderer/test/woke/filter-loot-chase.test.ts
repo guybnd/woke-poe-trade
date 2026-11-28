@@ -64,12 +64,12 @@ describe('unique bases by their average drop', () => {
     expect(one(U, 'Ring')).toMatchObject({ chaos: 4000, drop: { of: 1, chase: [{ name: 'Kalandra\'s Touch', chaos: 4000 }] } })
   })
 
-  it('chase bases go to Chase uniques, Always, with their own look; boss bases with world drops are priced', () => {
+  it('chase bases go to Chase uniques, Always, with their own look; boss bases with world drops get their own section', () => {
     const doc = parseFilter(neverSink('1-REGULAR'))
     const items = new Map(currencyItems(doc, look).map(i => [i.name, i]))
     expect(items.get('Leather Belt')).toMatchObject({ cat: 'uniqchase', avg: true, of: 3, chase: [{ name: 'Headhunter', chaos: 50000 }] })
     expect(items.get('Coral Amulet')?.cat).not.toBe('uniqchase')
-    expect(items.get('Agate Amulet')?.cat).toBe('uniqplain')
+    expect(items.get('Agate Amulet')?.cat).toBe('uniqbossmix')
     const cfg = defaultCurrency()
     expect(sectionMode(cfg, 'uniqchase')).toBe('always')
     const small = currencyLook(1, 'uniqchase', cfg)

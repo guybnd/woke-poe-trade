@@ -252,7 +252,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
         // Guy's S1: a boss base that also drops world uniques is priced by
         // those (the boss's own unique is left out); a boss-only one stays
         // Boss drops. A base with a chase unique on it goes to Chase uniques.
-        const cat = ucat === 'uniqboss' && p?.drop ? 'uniqplain' : ucat
+        const cat = ucat === 'uniqboss' && p?.drop ? 'uniqbossmix' : ucat
         seen.set(name, {
           name,
           cls: UNIQUE_CLS,

@@ -15,6 +15,9 @@ export const UNIQUE_CATEGORIES: LootCategory[] = [
   { id: 'uniqvar', name: 'High variance', art: 'Small Cluster Jewel' },
   { id: 'uniqearly', name: 'Early league', art: 'Bone Helmet' },
   { id: 'uniqboss', name: 'Boss drops', art: 'Hubris Circlet' },
+  // A boss base that also has uniques dropping anywhere (Guy 2026-11-28: its
+  // own section, apart from boss-only): priced by those world drops.
+  { id: 'uniqbossmix', name: 'Boss drops, also world drops', art: 'Agate Amulet' },
   { id: 'uniqfoul', name: 'Foulborn', art: 'Paua Amulet' },
   { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' }
 ]
@@ -30,6 +33,7 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
   uniqearly: { text: [200, 150, 90], color: 'Yellow', shape: 'Star' },
   // Not red: red beams and map icons are kept for Tink (Guy 2026-11-27).
   uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Pentagon' },
+  uniqbossmix: { text: [200, 125, 70], color: 'Orange', shape: 'Hexagon' },
   uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' },
   uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Cross' }
 }
