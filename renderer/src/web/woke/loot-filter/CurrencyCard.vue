@@ -45,26 +45,31 @@
       </tbody>
     </table>
     <div class="text-xs w-dim" data-currency-card-now>{{ nowLine }}</div>
+    <div v-if="floorLine" class="text-xs w-dim" data-currency-card-floor>{{ floorLine }}</div>
 
     <div :class="$style.fold">
       <WFoldHead fold="alt-f.currency-more" :class="$style.foldHead"><span>Own price, supply stack, own look</span></WFoldHead>
       <CurrencyItemEditor v-if="open.more" :it="it" :edit="edit" :step="now" :base-price="base" :base-look="currencyFullLook(now === 0 ? 1 : now, it.cat, cfg)" @change="setEdit" />
     </div>
   </div>
-  <div v-else class="text-xs w-dim">The Loot tab writes this rule; open it to see its items.</div>
+  <div v-else class="flex items-center gap-2 text-xs w-dim" data-currency-card-place>
+    <span class="grow">{{ placeLine }}</span>
+    <WButton v-if="tier && lootFocus(tier)" size="sm" data-currency-card-open @click="emit('open-rule', tier)">Open</WButton>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
-import { WSegmented } from '../ui'
+import { WButton, WSegmented } from '../ui'
 import LabelPreview from './LabelPreview.vue'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, catColour, currencyFullLook, currencyItems, faintOn, forcedHidden, offSteps, scaled, sectionMode, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
-import { gemItemFor } from './loot-focus'
+import { LEAGUE_SECTIONS } from './league-classes'
+import { gemItemFor, lootFocus } from './loot-focus'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
 import type { StylePatch } from './edits'
 import type { FilterCondition } from './parse'
@@ -80,9 +85,13 @@ const props = defineProps<{
   gem?: { level: number, quality: number, corrupted: boolean } | null
   // The rule that caught it (a gem's band rule says which band it is).
   rule?: FilterCondition[] | null
+  // That rule's tier and comment: which Loot tab rule it is (the Maps
+  // slider, a League section, a gem floor, a unique special).
+  tier?: string | null
+  note?: string | null
 }>()
 // The item's category and the name its row has on the Loot tab.
-const emit = defineEmits<{ 'open-tab': [cat: string, name: string] }>()
+const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule': [tier: string] }>()
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
 // The whole category (Guy 2026-11-27: every section has Off / Weighted /
@@ -129,6 +138,28 @@ const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null,
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
 const now = computed<CStep>(() => stepOfPile(stacks.value, props.stack, off.value))
 const starts = computed(() => stepStarts(eff.value, it.value?.cat ?? ''))
+
+// Rules the Loot tab writes that aren't an item's price step (Guy's picks
+// alt-f-hides and alt-f-floors, 2026-11-28): say which one caught it.
+const SECTION_NAMES: Record<string, string> = { gemexc: 'Exceptional gems', gemawk: 'Awakened gems', gemtrans: 'Transfigured gems', gemvaal: 'Vaal gems', gemsup: 'Supports', gemskill: 'Skill gems' }
+const floorLine = computed(() => {
+  const note = props.note ?? ''
+  const sec = /: (gem[a-z]+), (always|off)\b/.exec(note)
+  if (sec) return sec[2] === 'always' ? `Shown: ${SECTION_NAMES[sec[1]] ?? sec[1]} is Always, which also shows gems poe.ninja doesn't list.` : `Hidden: ${SECTION_NAMES[sec[1]] ?? sec[1]} is Off.`
+  if (/20% quality$/.test(note)) return 'Shown at Small by the 20% quality floor: a Gemcutter\'s Prism at the vendor.'
+  return ''
+})
+const placeLine = computed(() => {
+  const t = props.tier ?? ''
+  if (t === 'mapfloor') {
+    const from = cfg.value.mapFrom
+    return from > 16 ? 'Maps: every normal map hides. Special maps still show.' : `Maps: shown from tier ${from}. Lower normal maps hide.`
+  }
+  const league = LEAGUE_SECTIONS.find(x => x.id === t)
+  if (league) return `League: ${league.name} is Off.`
+  if (t.startsWith('u-')) return `Uniques: NeverSink's ${t.slice(2)} rule, kept above the priced uniques.`
+  return floorLine.value || 'The Loot tab writes this rule; open it to see its items.'
+})
 
 interface Row { step: CStep, from: number | null, note: string, look: StylePatch }
 const rows = computed<Row[]>(() => !it.value

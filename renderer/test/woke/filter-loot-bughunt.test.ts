@@ -119,6 +119,18 @@ describe('a step turned off, with gems', () => {
     expect(matchItem(doc2, gem('Arc', 5, 0)).visibility).toBe('Hide')
     expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Show')
   })
+  it('a narrow band hidden by an Off step stays hidden under a broader band that shows', () => {
+    const lines: GemLine[] = [{ name: 'Arc', variant: '20/20', chaos: 0.3, thin: false }, { name: 'Arc', variant: '21/20', chaos: 30, thin: false }]
+    const doc = parseFilter(SEMI)
+    applyCurrency(doc, on(), lookup, null, lines)
+    const hi = matchItem(doc, gem('Arc', 21, 20)).final?.block.tier ?? ''
+    const lo = matchItem(doc, gem('Arc', 20, 20)).final?.block.tier ?? ''
+    expect(hi > lo && /^s[1-4]$/.test(hi)).toBe(true)
+    const doc2 = parseFilter(SEMI)
+    applyCurrency(doc2, on(c => { c.off = [Number(hi.slice(1))] }), lookup, null, lines)
+    expect(matchItem(doc2, gem('Arc', 21, 20)).visibility).toBe('Hide')
+    expect(matchItem(doc2, gem('Arc', 20, 20)).visibility).toBe('Show')
+  })
 })
 
 describe('Alt+F jumps to the right place', () => {

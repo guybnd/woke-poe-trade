@@ -582,6 +582,13 @@ export function pileSteps (stacks: ReadonlyArray<number | null>, off: readonly n
   return out
 }
 
+// A gem band's thresholds, from its conditions (null for other items).
+function bandOfConds (it: CurrencyItem): { level: number, quality: number, corrupted: boolean, trans: boolean } | null {
+  if (it.type !== 'gems' || !it.conds) return null
+  const num = (key: string) => Number(it.conds!.find(x => x.key === key)?.values[0] ?? 0)
+  return { level: num('GemLevel'), quality: num('Quality'), corrupted: it.conds.some(x => x.key === 'Corrupted'), trans: !it.conds.some(x => x.key === 'TransfiguredGem') }
+}
+
 export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], opts: { faint?: boolean, floors?: FilterBlock[] } = {}): CurrencyCompiled {
   const blocks: FilterBlock[] = []
   const bts = (list: CurrencyItem[]) => [...new Set(list.map(i => i.bt ?? i.name))].sort()
@@ -589,14 +596,38 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   const area = c('AreaLevel', '>=', [68])
   const clsCond = (list: CurrencyItem[]) => list[0]?.cls === UNIQUE_CLS ? c('Rarity', '', ['Unique']) : c('Class', '==', [...new Set(list.flatMap(i => i.cls.split('|')))].sort())
   const steps = (it: CurrencyItem) => pileSteps(stacks.get(it.name)!, offSteps(it, cfg))
+  // A gem band hidden by an Off step also matches the narrower bands of its
+  // gem (Arc 1 catches Arc 21/20): a narrower band that shows gets its rule
+  // again just above the Hide, so it keeps its own step.
+  const rescued = new Set<string>()
+  const rescue = (list: CurrencyItem[], step: CStep = 5) => {
+    for (const it of list) {
+      const a = bandOfConds(it)
+      if (!a) continue
+      for (const n of items) {
+        const b = bandOfConds(n)
+        if (n === it || !b || n.bt !== it.bt || rescued.has(`${it.name}|${n.name}`) || forcedHidden(n, cfg)) continue
+        if (!(b.level >= a.level && b.quality >= a.quality && (b.corrupted || !a.corrupted) && b.trans === a.trans)) continue
+        const top = steps(n)[0]
+        // A louder one's rule is above the Hide already.
+        if (!top || top[2] || top[0] > step) continue
+        rescued.add(`${it.name}|${n.name}`)
+        const conds = [area, clsCond([n]), c('BaseType', '==', bts([n])), ...(n.conds ?? [])]
+        const look = cfg.items[n.name]?.look
+        blocks.push(block(top[0], conds, `${n.name}, above ${it.name}`, { ...currencyLook(top[0], n.cat, cfg), ...look }))
+      }
+    }
+  }
   // Items with their own look get rules of their own, first.
   const own = items.filter(it => cfg.items[it.name]?.look)
   for (const it of own) {
     for (const [s, k, hidden] of steps(it)) {
       const conds = [area, clsCond([it]), c('BaseType', '==', bts([it])), ...(it.conds ?? [])]
       if (k > 1) conds.push(c('StackSize', '>=', [k]))
-      if (hidden) blocks.push(block(0, conds, `${it.name}, ${CSTEP_NAMES[s]} off${k > 1 ? `, ${k}+` : ''}`))
-      else blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
+      if (hidden) {
+        rescue([it])
+        blocks.push(block(0, conds, `${it.name}, ${CSTEP_NAMES[s]} off${k > 1 ? `, ${k}+` : ''}`))
+      } else blocks.push(block(s, conds, `${it.name}, own look${k > 1 ? `, ${k}+` : ''}`, { ...currencyLook(s, it.cat, cfg), ...cfg.items[it.name]!.look }))
     }
   }
   // The rest grouped: loudest first (the first rule that matches wins, so a
@@ -613,19 +644,14 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
       groups.set(key, g)
     }
   }
-  // A step turned off hides from its place in the order when it starts above
-  // one pile (a quieter step of the item must not catch the big pile). From
-  // one pile it holds every pile of the item, so it waits until the shown
-  // rules: another gem band on the same base (21/20 with its own step) still
-  // shows.
-  const late: FilterBlock[] = []
   for (const g of [...groups.values()].sort((x, y) => y.step - x.step || y.k - x.k)) {
     const conds = [area, clsCond(g.list), c('BaseType', '==', bts(g.list)), ...(g.list[0].conds ?? [])]
     if (g.k > 1) conds.push(c('StackSize', '>=', [g.k]))
-    if (g.hidden) (g.k > 1 ? blocks : late).push(block(0, conds, [g.cat, `${CSTEP_NAMES[g.step]} off`, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', ')))
-    else blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
+    if (g.hidden) {
+      rescue(g.list, g.step)
+      blocks.push(block(0, conds, [g.cat, `${CSTEP_NAMES[g.step]} off`, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', ')))
+    } else blocks.push(block(g.step, conds, [g.cat, g.k > 1 ? `${g.k}+` : ''].filter(Boolean).join(', '), currencyLook(g.step, g.cat, cfg)))
   }
-  blocks.push(...late)
   // What was hidden by hand (its own Off, or its section's) hides before the
   // floors and Faint: a section set Off doesn't come back at 20% quality.
   // A gem band keeps its own conditions (level, quality, TransfiguredGem
