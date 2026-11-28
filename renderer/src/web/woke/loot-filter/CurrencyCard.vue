@@ -3,7 +3,7 @@
        2026-11-28): the answer first (its look and step), a Shows switch, a
        ruler of the five steps with a mark at its worth, a Price bias, every
        unique the base can be, then its section and its own state. -->
-  <div v-if="it" :class="$style.card" data-currency-card>
+  <div v-if="it" :class="$style.card" :data-currency-card="it.name">
     <div :class="$style.verdict">
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
       <span :class="$style.big" data-currency-card-now>{{ verdict }}</span>
@@ -30,7 +30,7 @@
     </div>
 
     <div v-if="mode !== 'off'" :class="$style.row">
-      <span :class="$style.lab">Price bias</span>
+      <span :class="$style.lab">Price bias<WInfo :text="BIAS_HELP" /></span>
       <span class="text-xs w-faint">Penalty</span>
       <input type="range" :min="-NUDGE_MAX" :max="NUDGE_MAX" step="1" :value="dragNotch ?? notch" :class="$style.range" :disabled="mode !== 'auto' || secMode === 'off'"
         aria-label="Price bias for this item" data-currency-card-mult
@@ -69,7 +69,7 @@
     </div>
     <div :class="$style.row" data-currency-card-item>
       <span :class="$style.lab">This item</span>
-      <StateChip :model-value="mode === 'always' ? 'always' : 'auto'" :options="ITEM_CHIPS" :title="it.name" dflt="auto" @update:model-value="setMode" />
+      <StateChip :model-value="mode === 'always' ? 'always' : 'auto'" :options="ITEM_CHIPS" :title="it.name" dflt="auto" :bias="-notch" @update:model-value="setMode" @update:bias="n => commitNotch(-n)" />
     </div>
     <label v-if="kindOf(it.cat) === 'cards'" :class="$style.row" data-currency-card-collect>
       <span :class="$style.lab">Collecting</span>
@@ -137,10 +137,17 @@ const emit = defineEmits<{ 'open-tab': [cat: string, name: string], 'open-rule':
 
 const open = reactive({ more: useFold('alt-f.currency-more') })
 // The item on its own: its section's state or Always. Hide is the Shows switch.
-const ITEM_CHIPS: ChipOption[] = [
-  { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
+// With its own bias, price or look it says Custom (Guy 2026-11-28).
+const ITEM_CHIPS = computed<ChipOption[]>(() => [
+  edit.value.mult != null || edit.value.price != null || edit.value.look
+    ? { value: 'auto', label: 'Custom', desc: 'Its section decides, with your bias, price or look.', dot: 'var(--w-gold)' }
+    : { value: 'auto', label: 'Same as section', desc: 'Its section decides.', dot: 'var(--w-gold)' },
   { value: 'always', label: 'Always', desc: 'Shows at least Small, whatever the price.', dot: 'var(--w-gold-hi)', glow: true }
-]
+])
+const BIAS_HELP = `Makes this item count above or below its price, so it shows louder or quieter.
+- Only this item (a unique base: only this base). Other items keep theirs.
+- Its section has its own bias, on the section chip. Both apply.
+- The mark and step move as you drag; it applies when you let go.`
 const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price and the step that price gets.
 - The base is priced by the average drop.
 - Untick a unique to leave it out of the average (a special drop you never see).
@@ -182,7 +189,11 @@ const liveMult = computed(() => dragNotch.value != null ? 1.25 ** dragNotch.valu
 const catName = computed(() => ALL_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
 // Tells the card above which section and row this is (its Go to rule and
 // rule name follow it).
-watch(() => it.value && [it.value.cat, catName.value, it.value.name] as const, p => emit('place', p ? { cat: p[0], catName: p[1], name: p[2] } : null), { immediate: true })
+const SECTION_NAMES: Record<string, string> = { gemexc: 'Exceptional gems', gemawk: 'Awakened gems', gemtrans: 'Transfigured gems', gemvaal: 'Vaal gems', gemsup: 'Supports', gemskill: 'Skill gems' }
+// A gem section's own Always / Hide rule has no row: its section still is the place.
+const secRule = computed(() => /: (gem[a-z]+), (always|off)\b/.exec(props.note ?? ''))
+watch(() => it.value ? [it.value.cat, catName.value, it.value.name] as const : secRule.value ? [secRule.value[1], SECTION_NAMES[secRule.value[1]] ?? secRule.value[1], props.name] as const : null,
+  p => emit('place', p ? { cat: p[0], catName: p[1], name: p[2] } : null), { immediate: true })
 onBeforeUnmount(() => emit('place', null))
 const catCss = computed(() => `rgb(${catColour(it.value?.cat ?? 'other', cfg.value).rgb.join(',')})`)
 
@@ -205,7 +216,6 @@ const starts = computed(() => stepStarts(eff.value, it.value?.cat ?? ''))
 
 // Rules the Loot tab writes that aren't an item's price step (Guy's picks
 // alt-f-hides and alt-f-floors, 2026-11-28): say which one caught it.
-const SECTION_NAMES: Record<string, string> = { gemexc: 'Exceptional gems', gemawk: 'Awakened gems', gemtrans: 'Transfigured gems', gemvaal: 'Vaal gems', gemsup: 'Supports', gemskill: 'Skill gems' }
 const floorLine = computed(() => {
   const note = props.note ?? ''
   const sec = /: (gem[a-z]+), (always|off)\b/.exec(note)
@@ -228,7 +238,7 @@ const placeLine = computed(() => {
 })
 
 // Where Open goes: the rule's own section, or Recipes for a recipe rule.
-const openTier = computed(() => /: recipe: /.test(props.note ?? '') ? 'recipes' : props.tier && lootFocus(props.tier) ? props.tier : null)
+const openTier = computed(() => /: recipe: /.test(props.note ?? '') ? 'recipes' : secRule.value ? `cat:${secRule.value[1]}:${props.name}` : props.tier && lootFocus(props.tier) ? props.tier : null)
 
 // The step a worth gets by price alone (a step turned off hides it).
 function stepAt (v: number): CStep {
@@ -379,7 +389,7 @@ function chaosText (v: number): string {
 }
 .cat i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
 .row { display: flex; align-items: center; gap: 8px; font-size: var(--w-fs-sm); }
-.lab { color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
+.lab { display: inline-flex; align-items: center; gap: 3px; color: var(--w-dim); min-width: 4.5rem; font-size: var(--w-fs-xs); }
 .range { flex: 1; min-width: 6rem; accent-color: var(--w-accent); }
 .mx { font-variant-numeric: tabular-nums; color: var(--w-accent); min-width: 3.2em; text-align: right; font-weight: 400; }
 .ruler { display: flex; flex-direction: column; gap: 3px; }

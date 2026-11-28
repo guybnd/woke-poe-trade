@@ -72,6 +72,7 @@
       <WChip clickable :active="only === 'shown'" @click="only = 'shown'">Can show {{ shownCount }}</WChip>
       <WChip clickable :active="only === 'hidden'" @click="only = 'hidden'">Always hidden {{ rows.length - shownCount }}</WChip>
       <WChip clickable :active="only === 'edited'" @click="only = 'edited'">Edited {{ editedCount }}</WChip>
+      <WChip v-if="biasedCount || only === 'biased'" clickable :active="only === 'biased'" title="Items with their own Price bias" data-loot-only-biased @click="only = 'biased'">Own price bias {{ biasedCount }}</WChip>
     </div>
 
     <div v-if="!rows.length" class="w-faint text-sm">{{ emptyText }}</div>
@@ -156,7 +157,7 @@
           <WItemRow :item="tipOf(r.it)" :class="[$style.row, { [$style.sel]: sel === r.it.name }]" role="row" action="pick" :data-currency-item="r.it.name" @pick="sel = sel === r.it.name ? null : r.it.name">
             <span :class="$style.name"><input v-if="kind === 'uniques'" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${r.it.name}`"
               title="Untick to hide this base in maps (you don't care about it)" data-loot-unique-on @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
-              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.edited" :class="$style.edited"> edited</span></span>
+              :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.bias" :class="$style.edited"> · bias {{ r.bias }}</span><span v-else-if="r.edited" :class="$style.edited"> edited</span></span>
             <span :class="$style.price" :title="r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
               <template v-if="r.it.type === 'gold'">by size</template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
             </span>
@@ -329,14 +330,20 @@ const rows = computed(() => items.value
     const stacks = stacksFor(it, eff.value)
     const edit = c.value.items[it.name]
     const off = offSteps(it, c.value)
-    return { it, one: stepOfPile(stacks, 1, off), shows: pileSteps(stacks, off).some(([, , hidden]) => !hidden), pills: pillsOf(stacks, edit, it, off), edited: edit != null }
+    return { it, one: stepOfPile(stacks, 1, off), shows: pileSteps(stacks, off).some(([, , hidden]) => !hidden), pills: pillsOf(stacks, edit, it, off), edited: edit != null, bias: biasText(edit?.mult) }
   })
   .sort((x, y) => y.it.chaos - x.it.chaos || x.it.name.localeCompare(y.it.name)))
 const shownCount = computed(() => rows.value.filter(r => r.shows).length)
 const editedCount = computed(() => rows.value.filter(r => r.edited).length)
+const biasedCount = computed(() => rows.value.filter(r => r.bias).length)
+// An item's own Price bias as the Alt+F card words it ("+25%"), or ''.
+function biasText (m: number | undefined) {
+  const p = m == null ? 0 : Math.round((m - 1) * 100)
+  return p === 0 ? '' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`
+}
 
 const query = ref('')
-const only = ref<'all' | 'shown' | 'hidden' | 'edited'>('all')
+const only = ref<'all' | 'shown' | 'hidden' | 'edited' | 'biased'>('all')
 const visible = computed(() => {
   const q = query.value.trim().toLowerCase()
   return rows.value.filter(r =>
@@ -344,7 +351,8 @@ const visible = computed(() => {
     (only.value === 'all' ||
       (only.value === 'shown' && r.shows) ||
       (only.value === 'hidden' && !r.shows) ||
-      (only.value === 'edited' && r.edited)))
+      (only.value === 'edited' && r.edited) ||
+      (only.value === 'biased' && r.bias)))
 })
 
 const groups = computed(() => CATS.value.map(cat => {
