@@ -3,7 +3,11 @@
     <div :class="$style.top">
       <WToggle v-model="w.on">Weights decide endgame gear</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="Every white, unidentified magic and unidentified rare gear item of item level 68+ gets points: its rarity and base rank, times each thing it has (drop tier, item level, corruption, size, and its biggest mark: links, influence, fractured...). Under the line it hides. Over it, it shows, and its score alone sets how loud: Normal, Big and Beam start at fixed scores you set, whatever the line. Only this profile. Your own rules, build rules and presets still go on top." />
+      <WInfo text="In maps, scores white, unidentified magic and unidentified rare gear of item level 68+.
+- Its rarity and base rank give points, times each thing it has: drop tier, item level, corruption, size, best mark.
+- Under the **line** it hides. Above it, **Normal**, **Big** and **Beam** start at scores you set.
+
+Only this profile. Your own rules, build rules and presets still win." />
       <span class="w-faint text-xs">{{ w.on ? `${store.weightRules.value.toLocaleString()} rules · ${sizeText}` : 'Off: NeverSink decides' }}</span>
       <span class="flex-1" />
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" @click="reset">Defaults</WButton>

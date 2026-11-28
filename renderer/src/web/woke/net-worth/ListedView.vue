@@ -41,7 +41,7 @@
             <th>Asking</th>
             <th title="poe.ninja's price now, for the whole stack. Dim is rough: its rolls, corruption or a thin market (!) move the price">Suggest</th>
             <th title="Your asking price against poe.ninja's">vs ninja</th>
-            <th data-goto-spot="still-cheapest" title="Still cheapest? Price check a listing with its own mods (your filters) to rank your price, then set a new one at the foot. The bolt is a quick search by name">Cheapest?</th>
+            <th data-goto-spot="still-cheapest" title="Still cheapest? Price check a listing with its own mods to rank your price, then set a new one at the foot. The bolt searches by name only">Cheapest?</th>
             <th :title="`Since you first listed it (a reprice doesn't reset it). Orange: ${staleDays} days or more`">Listed</th>
           </tr>
         </thead>

@@ -3,7 +3,7 @@
     <div :class="$style.top">
       <WToggle v-model="c.on">{{ kind === 'currency' ? 'Prices decide endgame currency' : `Prices decide endgame currency and ${KIND_NAME[kind]}` }}</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps (area level 68+), each pile of currency, essences, fossils, oils, delirium orbs, omens, tattoos and ducats counts as its poe.ninja price × stack (10 Chaos is 10c); an item whose full stack is worth less than Decent counts × stack^0.75, so piles of cheap shards stay quiet. Under the line it hides; over it it shows Small, and Normal, Decent, Big and Tink start at the prices you set; untick Show on a step to hide everything that would get it. Each category has its own Strictness (×1.25 a notch on top of the main one); click an item to set its step, price, supply stack or look by hand. Items with no price get a guess from NeverSink's tier (est.). Only this profile. Your own rules, build rules and presets still go on top. In maps these rules replace NeverSink's for these items, so price moves and tier edits for them apply only below area level 68." />
+      <WInfo :text="INFO" />
       <span class="w-faint text-xs">{{ statusText }}</span>
       <span class="flex-1" />
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category strictness back to the start; your item edits stay" @click="reset">Defaults</WButton>
@@ -165,6 +165,16 @@ const props = withDefaults(defineProps<{
 }>(), { kind: 'currency', focusItem: null })
 const KIND_NAME: Record<LootKind, string> = { currency: 'currency', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
+// The "?" (help format A: a lead line and bullets, checked by help-format.test.ts).
+const INFO = `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
+${props.kind === 'currency' || props.kind === 'fragments' || props.kind === 'cards' ? '- A stack counts at its whole price. Big stacks of cheap items count less.' : ''}
+- Under the **line** it hides. Above it, each step starts at the price you set.
+- Untick **Show** on a step to hide everything on it.
+- **Strictness** scales every price. Each section's chip adds its own **Price bias**.
+- [[Click]] an item to set its step, price or look by hand.
+- No price: a guess from NeverSink's tier, marked **est.**
+
+Only this profile. Your own rules, build rules and presets still win.`
 
 const c = computed(() => props.config.presets.currency)
 const STEP_CSS = ['#3b372f', '#6d6250', '#a08d5e', '#cdb27a', '#ffe196', '#ff4040']

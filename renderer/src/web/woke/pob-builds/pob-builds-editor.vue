@@ -27,7 +27,9 @@ Nothing reads the screen until you press it.">
       <WToggle v-model="treeOnIconClick" />
     </WSettingRow>
     <WSettingRow label="Mark nodes to refund on the passive tree"
-      hint="The build drawing also marks, in red, nodes you've taken in game that this tree doesn't have. Only what's on screen and joined to your taken nodes is checked; masteries and the ascendancy aren't.">
+      hint="The build drawing marks in red the nodes you've taken that this tree doesn't have.
+- Only nodes on screen and joined to your taken ones are checked.
+- Masteries and the ascendancy aren't.">
       <WToggle v-model="treeRefunds" />
     </WSettingRow>
     <template v-if="personalOn">
@@ -46,7 +48,8 @@ Nothing reads the screen until you press it.">
         <WToggle v-model="characterAutoRead" />
       </WSettingRow>
       <WSettingRow label="Save your character as a PoB build"
-        hint="Each read is written to Live/(character name).xml in your builds folder, so Path of Building opens your real gear, gems and tree. Written again on each read; the build you picked is never changed.">
+        hint="Each read writes **Live/(character name).xml** to your builds folder, so PoB opens your real gear, gems and tree.
+- The build you picked is never changed.">
         <WToggle v-model="characterLiveBuild" />
       </WSettingRow>
     </template>

@@ -5,7 +5,12 @@
     <div :class="$style.top">
       <WToggle v-model="w.on">Score endgame rares and flasks</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps (area level 68+), a white or magic utility flask scores its base rank × quality (×2 at 20%, ×4 at 26%) × item level (×2 at 85+, where the top mods roll), on the same line and steps as rares. Under the line it hides. Life and mana flasks, tinctures and levelling stay NeverSink's. The same switch as Rare gear." />
+      <WInfo text="In maps (area level 68+), white and magic utility flasks score on the same line and steps as rare gear.
+- The score is the base rank, raised by quality (20% and 26%) and item level 85+, where the top mods roll.
+- Under the **line** it hides.
+- Life and mana flasks, tinctures and levelling stay NeverSink's.
+
+The same switch as Rare gear." />
     </div>
     <div :class="$style.head" aria-hidden="true">
       <span :class="$style.name" />

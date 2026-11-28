@@ -5,7 +5,11 @@
     <div :class="$style.top">
       <WToggle v-model="c.on">Prices decide endgame loot</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="Items that start league content. poe.ninja prices almost none of them, so each mechanic is shown the way NeverSink shows it, or Off: hidden in maps (area level 68+). Splinters, embers, omens and tattoos are in Currency. The same switch as the other priced classes." />
+      <WInfo text="Items that start league content, one row per mechanic.
+- poe.ninja prices almost none of them, so each shows the way **NeverSink** does, or **Hide** in maps (area level 68+).
+- Splinters, embers, omens and tattoos are under Currency.
+
+The same switch as the other priced classes." />
     </div>
     <div v-for="s in LEAGUE_SECTIONS" :key="s.id" :class="$style.row" :data-loot-league-section="s.id">
       <span :class="$style.name">{{ s.name }}</span>
