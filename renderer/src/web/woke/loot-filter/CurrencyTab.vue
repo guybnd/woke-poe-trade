@@ -238,7 +238,7 @@ const props = withDefaults(defineProps<{
   // unset, it stays at the top of this page (Equipment's Special gear).
   topTo?: string
 }>(), { kind: 'currency', focusItem: null, topTo: undefined })
-const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items', special: 'special gear', flasks: 'flasks and tinctures' }
+const KIND_NAME: Record<LootKind, string> = { currency: 'currency', gold: 'gold', fragments: 'fragments', cards: 'divination cards', uniques: 'uniques', gems: 'gems', maps: 'special maps', jewels: 'jewels', league: 'league items', special: 'special gear', flasks: 'life and mana flasks' }
 const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.kind))
 // The "?" (help format A: a lead line and bullets, checked by help-format.test.ts).
 // poe.ninja prices no flask or tincture.
@@ -487,7 +487,7 @@ const strictLine = computed(() => {
   const at = n === 2 ? 'Semi-strict: every step price as you set it' : `${LEVEL_NAMES[n]}: every step price ${p}% ${n > 2 ? 'higher, so less shows' : 'lower, so more shows'}`
   return `${at}. It moves all pages and sections together, own rulers too.`
 })
-const SAMPLE_CATS = ({ gold: ['gold'], maps: ['mapblight', 'mapravaged'], jewels: ['jewabyss', 'jewplain'], league: ['lgexped', 'lgheist', 'lgviscera'], special: ['sgveil', 'sgmods', 'sginfl'], flasks: ['flasklife', 'flasktinc'], gems: ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'], uniques: ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'], cards: ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'], fragments: ['invites', 'uber', 'shaper', 'crests', 'emblems'] } as Partial<Record<LootKind, string[]>>)[props.kind] ?? ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
+const SAMPLE_CATS = ({ gold: ['gold'], maps: ['mapblight', 'mapravaged'], jewels: ['jewabyss', 'jewplain'], league: ['lgexped', 'lgheist', 'lgviscera'], special: ['sgveil', 'sgmods', 'sginfl'], flasks: ['flasklife'], gems: ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'], uniques: ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'], cards: ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'], fragments: ['invites', 'uber', 'shaper', 'crests', 'emblems'] } as Partial<Record<LootKind, string[]>>)[props.kind] ?? ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
 // Each step card's sample: an item of the picked category that one of shows

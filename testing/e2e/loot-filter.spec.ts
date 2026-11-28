@@ -1484,6 +1484,12 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   const ruby = page.locator('[data-equip-flask="Ruby Flask"]')
   await expect(ruby).toContainText('Small')
   await overlay.snap('equipment tab, flasks')
+  // Tinctures: the same table, a row per tincture base, each with its icon.
+  await page.locator('[data-equip-class="tinctures"]').click()
+  const oak = page.locator('[data-equip-flask="Oakbranch Tincture"]')
+  await expect(oak).toBeVisible()
+  await expect(oak.getByRole('button', { name: /rank: Good/ })).toBeVisible()
+  await overlay.snap('equipment tab, tinctures')
   // Base ranks is Equipment's section while Equipment shows; the top tab goes.
   await page.locator('[data-equip-class="ranks"]').click()
   await expect(page.locator('[data-equip-ranks] [data-lane="r1"]')).toBeVisible()
