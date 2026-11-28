@@ -204,7 +204,7 @@ import { canPriceCheck as canCheckByName, cursorPoint, openPriceCheck } from '..
 import type { ScreenPoint } from '../ui/tooltip/item-price-check'
 import ItemActions from './ItemActions.vue'
 import type { LookupTab } from '../item-lookup/lookup'
-import { LOOT_FILTER_TYPE, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
+import { LOOT_FILTER_TYPE, levelsOn, reloadHotkeyTarget, strictnessHotkeyTarget } from '../loot-filter/widget'
 import { rollHotkeyTarget, scanHotkeyTarget } from '../map-mods/scan'
 import { MAP_MODS_TYPE } from '../map-mods/widget'
 import { ESSENCE_SCAN_TYPE, essenceHotkeyTarget, essenceOnceTarget } from '../essence-scan/widget'
@@ -560,7 +560,7 @@ function commandEntries (): ActionEntry[] {
     if (w.wmType === LOOT_FILTER_TYPE && w.reloadViaChat) {
       add(w, 'Reload the saved loot filter in game', 'reloadHotkey', reloadHotkeyTarget(w.wmId))
     }
-    if (w.wmType === LOOT_FILTER_TYPE && w.neversink?.on) {
+    if (w.wmType === LOOT_FILTER_TYPE && levelsOn(w as { ownBase?: boolean })) {
       add(w, 'Make the loot filter stricter', 'stricterHotkey', strictnessHotkeyTarget(w.wmId, 'stricter'))
       add(w, 'Make the loot filter looser', 'looserHotkey', strictnessHotkeyTarget(w.wmId, 'looser'))
     } else if (w.wmType === MAP_MODS_TYPE && w.wmId === wm.widgets.value.find(_ => _.wmType === MAP_MODS_TYPE)?.wmId) {
