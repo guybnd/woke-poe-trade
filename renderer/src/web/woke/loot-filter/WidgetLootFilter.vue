@@ -113,7 +113,6 @@ if (props.config.wmFlags[0] === 'uninitialized') {
   // A new filter starts with the Loot and Equipment tabs on.
   props.config.presets.currency.on = true
   props.config.presets.weights.on = true
-  props.config.ownBase = true
   wm.show(props.config.wmId)
 }
 normalizeLootFilterWidget(props.config)

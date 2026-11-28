@@ -1,6 +1,7 @@
 // The whole road from a key press to the file the game reads: pick a filter,
 // change something, save, reload. The real store runs against a fake folder and
 // game, and every result is checked by parsing what was written.
+import { LEVEL_IDS } from '@/web/woke/loot-filter/strictness'
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import { reactive, ref, shallowRef } from 'vue'
 import { formatBlock, parseFilter, ruleLabel, serializeFilter, tierName } from '@/web/woke/loot-filter/parse'
@@ -434,12 +435,15 @@ describe('sources', () => {
     expect(store.doc.value).toBeNull()
   })
 
-  it('with no filter picked, it starts from the newest NeverSink file', async () => {
+  it('with no filter picked, it starts on our own filter, not a NeverSink file (NeverSink retired)', async () => {
     host.files.set('NeverSink strict.filter', neverSink('3-STRICT'))
     const config = widget()
     const store = useLootFilter(() => config)
     await store.load()
-    expect(config.sourceName).toBe('NeverSink strict.filter')
+    expect(config.ownBase).toBe(true)
+    expect(config.sourceName).toBe('')
+    expect(store.doc.value?.blocks.some(b => b.type === 'woke->rest')).toBe(true)
+    expect(store.doc.value?.strictness).toBe(LEVEL_IDS[config.neversink.level])
   })
 
   it('a level picked on the dock card saves, keeps your changes, pauses auto and waits for your reload', async () => {

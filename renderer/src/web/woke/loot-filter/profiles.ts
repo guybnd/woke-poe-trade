@@ -56,7 +56,6 @@ export function profileFile (w: LootFilterWidget, p: FilterProfile): string {
     sourceOnline: d.sourceOnline ?? false,
     sourceTitle: d.sourceTitle ?? '',
     neversink: d.neversink,
-    ownBase: d.ownBase,
     profile: p,
     profiles: w.profiles
   })

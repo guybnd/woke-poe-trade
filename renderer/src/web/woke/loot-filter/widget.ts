@@ -139,6 +139,9 @@ export interface LootFilterWidget extends Widget {
   // and no file to read: the default since NeverSink was retired (M7). Off
   // when you pick another filter file. Each profile has its own.
   ownBase?: boolean
+  // Moved onto our own base by the one-time switch (Config.ts): the next load
+  // saves once, so the game's file matches what the editor shows.
+  ownBaseSavePending?: boolean
   strictAuto: StrictnessAuto
   // Rules from the rule builder, on top of NeverSink's.
   rules: OwnRule[]
@@ -208,10 +211,11 @@ export function initLootFilterWidget (w: LootFilterWidget) {
 export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootFilterWidget {
   const w = { wmId, wmType: LOOT_FILTER_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as LootFilterWidget
   initLootFilterWidget(w)
-  // A new filter starts with the Loot and Equipment tabs on, on our own base.
+  // A new filter starts with the Loot and Equipment tabs on. It goes onto our
+  // own base the first time it loads (store.ts load()), not before: an
+  // overlay nobody set up stays quiet.
   w.presets.currency.on = true
   w.presets.weights.on = true
-  w.ownBase = true
   // Order doesn't matter: 'Shift + Alt + F' is 'Alt + Shift + F'.
   const used = new Set(taken.map(sortKeys))
   const free = (key: string | null) => key && !used.has(sortKeys(key)) ? key : null
@@ -414,8 +418,6 @@ export function baseFromCopy (text: string): string {
 
 type OutputOf = Pick<LootFilterWidget, 'sourceName' | 'saveMode' | 'sourceOnline' | 'sourceTitle'> & {
   neversink?: { on: boolean }
-  // Our own filter: never written over the picked file (overwrite mode).
-  ownBase?: boolean
   // The profile it saves for; without one, the profile in use (if any).
   profile?: Pick<FilterProfile, 'name' | 'legacyFile'> | null
   profiles?: FilterProfile[]
@@ -446,6 +448,6 @@ function legacyOutput (w: OutputOf): string {
     const safe = (w.sourceTitle || w.sourceName).replace(/[<>:"/\\|?*]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
     return `${safe || 'Online filter'} (woke).filter`
   }
-  if (w.saveMode === 'overwrite' && !w.ownBase) return w.sourceName
+  if (w.saveMode === 'overwrite') return w.sourceName
   return w.sourceName.replace(/\.filter$/i, '') + ' (woke).filter'
 }

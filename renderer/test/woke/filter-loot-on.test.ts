@@ -53,11 +53,12 @@ describe('Loot tab on by default', () => {
 
 // Guy's full cut (2026-11-28): our own filter is the default source.
 describe('own filter by default', () => {
-  it('a new filter starts on our own base, with strictness and no download', () => {
+  it('a filter nobody set up stays quiet: no strictness keys until it first loads', () => {
     const w = seedLootFilterWidget(1)
-    expect(w.ownBase).toBe(true)
-    expect(levelsOn(w)).toBe(true)
-    expect(nsDownload(w)).toBe(false)
+    expect(w.ownBase).toBeUndefined()
+    expect(levelsOn(w)).toBe(false)
+    expect(nsDownload({ ...w, ownBase: true })).toBe(false)
+    expect(levelsOn({ ...w, ownBase: true })).toBe(true)
   })
 
   it('NeverSink from GitHub downloads only while our base is off', () => {

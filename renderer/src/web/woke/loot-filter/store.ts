@@ -289,7 +289,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     return t ? idGroups(t, driverSeed.value, cfg().presets.weights.mult) : null
   }
 
-  const sourceStamp = (text: string) => `${cfg().sourceName}|${hash(text)}`
+  const sourceStamp = (text: string) => `${cfg().ownBase ? 'own' : cfg().sourceName}|${hash(text)}`
 
   // What the net leaves hidden because you said so: "Not for me" on a hidden
   // item, or moving it down yourself.
@@ -578,7 +578,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   // Cluster jewel prices come in their own request.
   watch(clusterPrices, () => { if (baseText.value != null) rebuild() })
-  watch(() => cfg().ownBase, () => { load().catch(() => {}) })
+  watch(() => cfg().ownBase, () => { if (!switching.value) load().catch(() => {}) })
   watch(ownTables, () => { if (baseText.value != null && cfg().presets.currency.on) rebuild() })
   watch([affixTable, driverSeed], () => { if (baseText.value != null && cfg().presets.weights.on) rebuild() })
   watch([prices.currentLeague, () => baseText.value != null], ([league, loaded]) => { if (loaded) loadClusterPrices(league) })
@@ -920,6 +920,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
     // Our own base ranks, read by the gear rules: there before the first build.
     await loadBaseRanks()
     if (seq !== loadSeq) return
+    // NeverSink is retired: a filter with nothing picked yet starts on ours.
+    if (!cfg().ownBase && !cfg().sourceName && !cfg().neversink.on) cfg().ownBase = true
     if (cfg().ownBase) {
       // Our own filter: nothing to read or download, the skeleton at the
       // level you picked, with every woke rule on top.
@@ -928,10 +930,18 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       loadClusterPrices(prices.currentLeague.value)
       baseNeedsBackup.value = false
       updateReady.value = null
+      sourceChanged.value = false
+      loading.value = false
       baseText.value = ownBaseText(LEVEL_IDS[clampLevel(cfg().neversink.level)])
       rebuild()
       baseVersion.value = null
       readGameFilter().catch(() => {})
+      // Just moved onto our base: write it once, so the game's file (reloaded
+      // when you next reload) is our filter, not the old NeverSink one.
+      if (cfg().ownBaseSavePending) {
+        delete cfg().ownBaseSavePending
+        if (cfg().savedExtraSig != null) save({ auto: true }).catch(() => {})
+      }
       return
     }
     if (cfg().neversink.on) {

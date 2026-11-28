@@ -237,7 +237,7 @@ function makeSides () {
   const theirs = other.value ? runDrops(other.value, drops.value) : null
   const out = [{
     key: 'mine',
-    title: props.config.neversink.on ? `Your filter · ${LEVEL_NAMES[props.config.neversink.level]}` : 'Your filter',
+    title: levelsOn(props.config) ? `Your filter · ${LEVEL_NAMES[props.config.neversink.level]}` : 'Your filter',
     sum: summarize(mine),
     sounds: soundsOf(mine),
     diff: diffText(mine, theirs),

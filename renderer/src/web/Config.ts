@@ -595,8 +595,11 @@ function upgradeConfig (_config: Config): Config {
   // moves onto our own base once. Picking a filter file switches it back off.
   if (!modules.woke?.ownBaseByDefault && (lootWidgets.length || modules.woke)) {
     for (const w of lootWidgets) {
-      const lw = w as unknown as { ownBase?: boolean, profiles?: Array<{ data?: { ownBase?: boolean } }> }
+      const lw = w as unknown as { ownBase?: boolean, ownBaseSavePending?: boolean, sourceName?: string, neversink?: { on?: boolean }, profiles?: Array<{ data?: { ownBase?: boolean } }> }
+      // A filter nobody set up stays as it is: it goes onto our base when first opened.
+      if (!lw.sourceName && !lw.neversink?.on) continue
       lw.ownBase = true
+      lw.ownBaseSavePending = true
       for (const p of Array.isArray(lw.profiles) ? lw.profiles : []) if (p?.data && typeof p.data === 'object') p.data.ownBase = true
     }
     ensureWokeConfig(modules).woke.ownBaseByDefault = true
