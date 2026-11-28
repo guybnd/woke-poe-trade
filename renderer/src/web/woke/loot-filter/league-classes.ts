@@ -44,15 +44,15 @@ export const LEAGUE_IDS = new Set(LEAGUE_CATEGORIES.map(x => x.id))
 export const LEAGUE_MODES: Record<string, SectionMode> = { lgchron: 'always', lgviscera: 'always', lgkeys: 'always', lgult: 'always', lgmerc: 'always', lgexped: 'always' }
 
 export const LEAGUE_LOOK: Record<string, { text: [number, number, number], color: string, shape: string }> = {
-  lgexped: { text: [220, 170, 120], color: 'Orange', shape: 'Kite' },
-  lgheist: { text: [230, 150, 110], color: 'Brown', shape: 'Kite' },
-  lgchron: { text: [150, 210, 120], color: 'Green', shape: 'Kite' },
-  lgviscera: { text: [210, 140, 150], color: 'Pink', shape: 'Kite' },
-  lgkeys: { text: [200, 190, 240], color: 'Purple', shape: 'Kite' },
-  lgult: { text: [235, 200, 120], color: 'Yellow', shape: 'Kite' },
-  lgsanctum: { text: [140, 200, 230], color: 'Cyan', shape: 'Kite' },
-  lgcharts: { text: [170, 200, 255], color: 'Blue', shape: 'Kite' },
-  lgmerc: { text: [235, 235, 235], color: 'White', shape: 'Kite' }
+  lgexped: { text: [220, 170, 120], color: 'Orange', shape: 'Pentagon' },
+  lgheist: { text: [230, 150, 110], color: 'Brown', shape: 'Pentagon' },
+  lgchron: { text: [150, 210, 120], color: 'Green', shape: 'Pentagon' },
+  lgviscera: { text: [210, 140, 150], color: 'Pink', shape: 'Pentagon' },
+  lgkeys: { text: [200, 190, 240], color: 'Purple', shape: 'Pentagon' },
+  lgult: { text: [235, 200, 120], color: 'Yellow', shape: 'Pentagon' },
+  lgsanctum: { text: [140, 200, 230], color: 'Cyan', shape: 'Pentagon' },
+  lgcharts: { text: [170, 200, 255], color: 'Blue', shape: 'Pentagon' },
+  lgmerc: { text: [235, 235, 235], color: 'White', shape: 'Pentagon' }
 }
 
 const JOBS = ['Bunker', 'Laboratory', 'Mansion', 'Prohibited Library', 'Records Office', 'Repository', "Smuggler's Den", 'Tunnels', 'Underbelly']
