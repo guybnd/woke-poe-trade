@@ -1,13 +1,12 @@
 <template>
   <div :class="$style.wrap" class="w-scroll" data-w-switches>
     <div class="flex items-center gap-2 text-sm">
-      <span v-if="g.on" class="w-dim">Your table replaces {{ store.gearReplaced.value }} of NeverSink's gear rules.</span>
-      <span v-else class="w-dim">Showing NeverSink's gear rules as they are. Change anything to take them over.</span>
+      <span v-if="g.on" class="w-dim">Your table decides magic and rare gear.</span>
+      <span v-else class="w-dim">Showing the default gear rules. Change anything to take them over.</span>
       <WInfo text="Magic and rare gear that drops with a 3.30 item tier.
 - Each cell is the lowest drop tier that shows.
-- Influenced, fractured, veiled and other special gear keeps NeverSink's own rules, which come first." />
+- Influenced, fractured, veiled and other special gear keeps its own rules, which come first." />
       <WButton size="sm" variant="ghost" icon="fas fa-magic" style="margin-left: auto;" title="One-click setups for the whole table" @click="quickMenu">Quick setups ▾</WButton>
-      <WButton v-if="g.on" size="sm" variant="ghost" @click="backToNeverSink">Back to NeverSink</WButton>
     </div>
 
     <template v-if="view === 'table'">
@@ -258,9 +257,9 @@
           </div>
         </div>
       </div>
-      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off NeverSink's rank. Exotic: talismans, experimented and other special bases NeverSink shows with their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more (NeverSink's top exotic tiers). Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
+      <div class="w-faint text-xs">Click to pick, shift-click for a run. Drag a base, or the picked ones, onto a column to move them. A move applies to every drop tier. "was R2" marks a base moved off its default rank. Exotic: talismans, experimented and other special bases shown by their own rules, before this table; they only reach the table when those rules pass them by. Exotic, valuable: the ones worth about a divine or more. Drag between the two exotic columns to change it; Rare gear's score and text colour follow.</div>
       <div class="flex gap-1">
-        <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks to NeverSink</WButton>
+        <WButton size="sm" variant="ghost" :disabled="!movedCount" @click="change(x => { x.moves = {} })">Reset ranks</WButton>
       </div>
     </template>
   </div>
@@ -376,17 +375,10 @@ function onlyBuild (x: GearSettings) {
   }
   if (!x.show.build.rare) x.show.build.rare = 2
 }
-function backToNeverSink () {
-  const x = g.value
-  x.on = false
-  x.quality.on = false
-  // Slot lines belong to the rows NeverSink's numbers replace next time.
-  x.slots = {}
-}
 
 function rowSub (row: GearRow): string {
   if (row === 'build') return buildCount.value ? `${buildCount.value} from your build` : 'link a PoB build'
-  if (row === 'exotic') return `${exotics.value.size} · NeverSink's rules first`
+  if (row === 'exotic') return `${exotics.value.size} · own rules first`
   if (row === 'any') return 'every other base'
   return `${lists.value[row].length} bases`
 }
