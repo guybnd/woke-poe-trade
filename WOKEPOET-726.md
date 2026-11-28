@@ -27,6 +27,14 @@ history:
       enchant row only applies while that row exists; old row names "… other"
       lose their edits.
     id: a-2026-11-28t11-53-35-550z
+  - type: activity
+    user: Agent
+    date: '2026-11-28T12:20:39.844Z'
+    comment: >-
+      PR https://github.com/guybnd/woke-poe-trade/pull/1112 open, CI green,
+      mergeable; branch handed to coordinator for dev reload. Blocked on Guy's
+      pick (none saved yet): https://claude.ai/artifact/AXpsVm8ATJhj7FKiHedt4g
+    id: a-2026-11-28t12-20-39-844z
 ---
 > **TL;DR:** The cluster jewel part of the Jewels page is two sections priced two ways. Redo it as one section; Guy picks the layout on the mock page, recommended A (a fold per size, band rows + money enchant rows, all on the Loot ruler).
 
