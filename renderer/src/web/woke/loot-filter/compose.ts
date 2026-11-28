@@ -8,6 +8,7 @@ import type { FilterDoc } from './parse'
 import { nameCheck, ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
+import { levellingOnly, lootPresets, migratedPresets } from './loot-presets'
 import type { Presets, UniqueBreakdown } from './presets'
 import { applyEdits } from './edits'
 import { applyGear } from './gear'
@@ -102,15 +103,17 @@ export interface Composed {
 
 export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const next = parseFilterCopy(text)
+  // The Loot tab's first-time carry-over, even before the tab is opened.
+  const migrated = migratedPresets(cfg.presets)
   // Rare weights (beta) first, so everything below goes on top of them.
   const weightBases = cfg.presets.weights.on ? filterBases(next, cfg.presets.weights.ranks) : []
   const weights = applyWeights(next, cfg.presets.weights, weightBases)
   // Utility flasks score on the same line (Equipment › Flasks).
   applyFlasks(next, cfg.presets.weights)
   // Currency weights (beta) the same way: above everything NeverSink has.
-  const currency = applyCurrency(next, cfg.presets.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
+  const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
   // Maps under the Loot tab's tier slider hide.
-  applyMapFloor(next, cfg.presets.currency)
+  applyMapFloor(next, migrated.currency)
   // League mechanics set Off on the Loot tab hide in maps.
   applyLeagueOff(next, cfg.presets.currency)
   // Build rules go in first, so edits to them (restyles) apply on top.
@@ -121,8 +124,10 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     insertBuildBlocks(next, blocks)
     buildCount = blocks.length
   }
+  // Presets the Loot tab covers leave maps to it (lootPresets).
+  const presets = lootPresets(migrated, currency != null)
   // Presets' rules, then your own rules above them: yours win.
-  const presetTop = presetBlocks(next, cfg.presets, cfg.prices.lookup, cfg.dustList, {
+  const presetTop = presetBlocks(next, presets, cfg.prices.lookup, cfg.dustList, {
     breakdown: cfg.presets.cheapUniques.on ? cfg.prices.breakdown : null,
     build: input ? { uniqueBases: input.uniqueBases, weaponClasses: input.weaponClasses } : null
   })
@@ -147,7 +152,8 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const gear = applyGear(next, cfg.presets.gear, input?.rareBases ?? [])
   // Quiet mode, bigger labels, colour-blind colours: over NeverSink's rules
   // as you left them.
-  const presetChanges = applyPresetChanges(next, cfg.presets)
+  const presetChanges = applyPresetChanges(next, presets)
+  if (currency) levellingOnly(next)
   // Before the net reads what the rules hide: as the game will read them.
   const renameBase = cfg.renameBase ?? gemBaseName
   renameBases(next, renameBase)
