@@ -2,7 +2,8 @@
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { RANK_KEYS, filterBases } from './weights'
+import { RANK_KEYS, baseRanks, filterBases } from './weights'
+import type { FilterDoc } from './parse'
 import type { BaseRow, RankKey, WeightItem } from './weights'
 import { pastedRare } from './weight-samples'
 
@@ -37,3 +38,26 @@ export function setWeightRank (config: LootFilterWidget, row: BaseRow, to: RankK
 }
 
 export const rankStep = (r: RankKey, dir: 1 | -1): RankKey | null => RANK_KEYS[RANK_KEYS.indexOf(r) + dir] ?? null
+
+// Valuable exotic bases (Guy, 2026-11-28): Base ranks splits its Exotic lane
+// into the ones worth about a divine or more (rank x1: NeverSink's top two
+// exotic tiers, which it sets from trade prices) and the rest (x2). A move
+// between the two lanes is your own x1/x2 rank, so Rare gear's score and
+// the exotic text colour follow it.
+export type ExoticLane = 'exotichi' | 'exotic'
+export const isExoticLane = (lane: string): lane is ExoticLane => lane === 'exotichi' || lane === 'exotic'
+
+export function valuableExotics (doc: FilterDoc, own: Record<string, RankKey>, exotics: Iterable<string>): Set<string> {
+  const top = new Set(baseRanks(doc).x1)
+  return new Set([...exotics].filter(b => (own[b] ?? (top.has(b) ? 'x1' : 'x2')) === 'x1'))
+}
+
+export function moveExotics (store: LootFilterStore, config: LootFilterWidget, bases: readonly string[], lane: ExoticLane) {
+  const doc = store.doc.value
+  if (!doc) return
+  const top = new Set(baseRanks(doc).x1)
+  const to: RankKey = lane === 'exotichi' ? 'x1' : 'x2'
+  const w = config.presets.weights
+  const rest = Object.entries(w.ranks).filter(([n]) => !bases.includes(n))
+  w.ranks = Object.fromEntries([...rest, ...bases.filter(b => (top.has(b) ? 'x1' : 'x2') !== to).map(b => [b, to])])
+}

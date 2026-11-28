@@ -1,6 +1,6 @@
 // Base ranks: dragging a base, or the picked set, onto another column.
 import { describe, it, expect } from 'vitest'
-import { canDrop, dragSet, dropMoves } from '@/web/woke/loot-filter/gear-drag'
+import { canDrop, dragSet, dropMoves } from '@/web/woke/loot-filter/gear-drop'
 
 describe('gear drag and drop', () => {
   it('drags the picked set when the card is in it, else the card alone', () => {
@@ -25,5 +25,15 @@ describe('gear drag and drop', () => {
     expect(dropMoves('build', 'never')).toEqual(['never'])
     expect(dropMoves('build', 'build')).toEqual([])
     expect(dropMoves('r1', 'exotic')).toEqual([])
+    expect(dropMoves('exotic', 'exotichi')).toEqual(['exotichi'])
+    expect(dropMoves('exotichi', 'exotic')).toEqual(['exotic'])
+  })
+
+  it('swaps bases between the two exotic columns only', () => {
+    expect(canDrop('exotic', 'exotichi')).toBe(true)
+    expect(canDrop('exotichi', 'exotic')).toBe(true)
+    expect(canDrop('r1', 'exotichi')).toBe(false)
+    expect(canDrop('none', 'exotic')).toBe(false)
+    expect(canDrop('exotichi', 'r2')).toBe(true)
   })
 })

@@ -83,7 +83,7 @@ const KINDS: Array<{ id: string, w: number, make: Make }> = [
     make: r => {
       const b = one(PLAIN_BASES, r)
       const rar: FilterRarity = r() < 0.5 ? 'Magic' : 'Rare'
-      return { key: `pc-${b}-${rar}`, label: b, kind: 'Corrupted implicit', tip: b, facts: facts(b, 'Jewels', rar, one(ILVLS, r), { corrupted: true, corruptedMods: 1, hasImplicitMod: true }), priced: 'Jewel with a corrupted implicit' }
+      return { key: `pc-${b}-${rar}`, label: b, kind: 'Corrupted implicit', tip: b, facts: facts(b, 'Jewels', rar, one(ILVLS, r), { corrupted: true, corruptedMods: 1, hasImplicitMod: true }), priced: `${rar} jewel with a corrupted implicit` }
     }
   },
   {
