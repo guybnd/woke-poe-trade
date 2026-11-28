@@ -115,7 +115,7 @@ describe('rare weights', () => {
   })
 
   it('reads NeverSink\'s base lists', () => {
-    const ranks = baseRanks(parseFilter(SEMI))
+    const ranks = baseRanks()
     expect(ranks.x1).toContain('Simplex Amulet')
     expect(ranks.r1).toContain("Lich's Circlet")
     expect(ranks.r1.length).toBeGreaterThan(10)
@@ -242,5 +242,26 @@ describe('rare weights', () => {
     expect(w.need).toBe(defaultWeights().need)
     expect(w.mult.r1).toBe(defaultWeights().mult.r1)
     expect(w.mult.t5).toBe(12)
+  })
+})
+
+describe('rare weights: No rank and Large penalties (Guy, 2026-11-28)', () => {
+  it('are the defaults', () => {
+    const d = defaultWeights()
+    expect(d.mult.r0).toBe(0.5)
+    expect(d.mult.big).toBe(0.7)
+  })
+  it('move saved settings at 0 points once, and leave tuned ones', () => {
+    const old = { ...defaultWeights(), v: 0 }
+    old.mult = { ...old.mult, r0: 1, big: 1 }
+    const moved = normalizeWeights(old)
+    expect(moved.mult.r0).toBe(0.5)
+    expect(moved.mult.big).toBe(0.7)
+    expect(moved.v).toBe(1)
+    const tuned = normalizeWeights({ ...old, mult: { ...old.mult, r0: 2, big: 1.2 } })
+    expect(tuned.mult.r0).toBe(2)
+    expect(tuned.mult.big).toBe(1.2)
+    // Already moved: back at 0 by hand stays 0.
+    expect(normalizeWeights({ ...moved, mult: { ...moved.mult, r0: 1 } }).mult.r0).toBe(1)
   })
 })

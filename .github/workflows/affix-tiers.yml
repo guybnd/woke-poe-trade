@@ -1,0 +1,69 @@
+name: Affix tiers
+
+# The loot filter's mod names for identified gear: every prefix and suffix
+# that can roll on each kind of gear, with its stat text and tier, from
+# RePoE's export of the game data (scripts/gen-affix-tiers.mjs). Rare weights
+# score identified rares and magic items from it. Runs every Monday, by hand
+# (Actions > Affix tiers > Run workflow, on master or a branch), and on a pull
+# request that changes the script. It commits the table to the branch it ran
+# on and starts that branch's tests. On master's schedule it opens a pull
+# request instead, since master takes no pushes.
+on:
+  schedule:
+    - cron: '47 5 * * 1'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/gen-affix-tiers.mjs
+      - .github/workflows/affix-tiers.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: affix-tiers-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  fetch:
+    # Only branches of this repository can take the table's commit, and not
+    # again for the table's own commit.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'github-actions[bot]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      with:
+        ref: ${{ github.head_ref || github.ref_name }}
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+    - name: Read the game data
+      run: node scripts/gen-affix-tiers.mjs
+    - name: Commit the table
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+        DEFAULT: ${{ github.event.repository.default_branch }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        FILE=renderer/public/data/affix-tiers.json
+        # The date alone changed: nothing to commit.
+        if git diff --quiet -I '"made"' -- "$FILE"; then echo "No change."; exit 0; fi
+        git add "$FILE"
+        if [ "$BRANCH" = "$DEFAULT" ]; then
+          NEW="affix-tiers-$(date -u +%Y%m%d)"
+          git checkout -b "$NEW"
+          git commit -m "Loot filter: affix tiers from the game data"
+          git push origin "HEAD:$NEW"
+          gh pr create --base "$DEFAULT" --head "$NEW" --title "Loot filter: affix tiers from the game data" --body "The game's mod names or tiers changed (scripts/gen-affix-tiers.mjs, from RePoE's export). Rare weights score identified gear from this table."
+          gh workflow run test.yml --ref "$NEW"
+        else
+          git commit -m "Loot filter: affix tiers from the game data"
+          git push origin "HEAD:$BRANCH"
+          # A push by this workflow doesn't start the tests on its own.
+          gh workflow run test.yml --ref "$BRANCH"
+        fi

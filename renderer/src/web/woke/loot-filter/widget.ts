@@ -133,6 +133,9 @@ export interface LootFilterWidget extends Widget {
   // and these are moved there on first start.
   history?: unknown
   neversink: NeverSinkSource
+  // Test (NeverSink retirement M3): write only woke's rules, onto our own
+  // skeleton (own-base.ts), with no NeverSink rules underneath.
+  ownBase?: boolean
   strictAuto: StrictnessAuto
   // Rules from the rule builder, on top of NeverSink's.
   rules: OwnRule[]
@@ -202,6 +205,9 @@ export function initLootFilterWidget (w: LootFilterWidget) {
 export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootFilterWidget {
   const w = { wmId, wmType: LOOT_FILTER_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as LootFilterWidget
   initLootFilterWidget(w)
+  // A new filter starts with the Loot and Equipment tabs on.
+  w.presets.currency.on = true
+  w.presets.weights.on = true
   // Order doesn't matter: 'Shift + Alt + F' is 'Alt + Shift + F'.
   const used = new Set(taken.map(sortKeys))
   const free = (key: string | null) => key && !used.has(sortKeys(key)) ? key : null
@@ -211,6 +217,23 @@ export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootF
   w.stricterHotkey = free(w.stricterHotkey)
   w.looserHotkey = free(w.looserHotkey)
   return w
+}
+
+// Once per config (Config.ts, woke.lootOnByDefault): the Loot and Equipment tabs go on for
+// the profile in use and every stored one, as NeverSink's tab is retired.
+export function lootOnForAll (w: { presets?: unknown, profiles?: Array<{ data?: { presets?: unknown } }> }) {
+  const on = (holder: { presets?: unknown }) => {
+    const p = (holder.presets && typeof holder.presets === 'object' ? holder.presets : {}) as Record<string, unknown>
+    // Loot and Equipment both (Guy, 2026-11-28: Equipment out of beta too).
+    for (const k of ['currency', 'weights']) {
+      const c = (p[k] && typeof p[k] === 'object' ? p[k] : {}) as { on?: boolean }
+      c.on = true
+      p[k] = c
+    }
+    holder.presets = p
+  }
+  on(w)
+  for (const p of Array.isArray(w.profiles) ? w.profiles : []) if (p?.data && typeof p.data === 'object') on(p.data)
 }
 
 export function normalizeLootFilterWidget (w: LootFilterWidget) {

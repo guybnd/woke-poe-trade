@@ -11,6 +11,10 @@ on:
       league:
         description: League (empty for poe.ninja's current challenge league)
         required: false
+      probe:
+        description: Only print what poe.ninja answers for the pages it can't read yet
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -31,9 +35,14 @@ jobs:
     - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       with:
         node-version: 22
+    - name: Probe poe.ninja
+      if: inputs.probe
+      run: node scripts/probe-ninja.mjs "${{ inputs.league }}"
     - name: Read poe.ninja's history
+      if: ${{ !inputs.probe }}
       run: node scripts/gen-day1-prices.mjs "${{ inputs.league }}"
     - name: Commit the table
+      if: ${{ !inputs.probe }}
       env:
         GH_TOKEN: ${{ github.token }}
         BRANCH: ${{ github.head_ref || github.ref_name }}

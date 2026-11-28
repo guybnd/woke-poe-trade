@@ -13,7 +13,7 @@ const doc = parseFilter(neverSink('2-SEMI-STRICT'))
 
 describe('valuable exotic bases', () => {
   it('starts from NeverSink\'s top exotic tiers', () => {
-    const ranks = baseRanks(doc)
+    const ranks = baseRanks()
     const all = [...ranks.x1, ...ranks.x2]
     const hi = valuableExotics(doc, {}, all)
     expect(hi.has('Simplex Amulet')).toBe(true)
@@ -21,7 +21,7 @@ describe('valuable exotic bases', () => {
   })
 
   it('a move between the lanes is your own x1/x2 rank, and back clears it', () => {
-    const ranks = baseRanks(doc)
+    const ranks = baseRanks()
     const lo = ranks.x2[0]
     const config = { presets: { weights: { ...defaultWeights(), ranks: {} } } } as unknown as LootFilterWidget
     const store = { doc: { value: doc } } as unknown as LootFilterStore

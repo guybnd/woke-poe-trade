@@ -73,8 +73,13 @@ describe('gems on the Loot tab', () => {
     // A transfigured gem isn't caught by its base gem's cheap band.
     expect(hit(gem('Ice Nova', 1, 0, { transfigured: true }))?.visibility).toBe('Show')
     expect(hit(gem('Ice Nova', 1))?.visibility).toBe('Hide')
-    // Levelling is NeverSink's.
-    expect(hit(gem('Arc', 5, 0, { areaLevel: 30 }))?.type).not.toBe(CURRENCY_TYPE)
+    // Levelling: every gem at least Normal before Act 4, quality gems Small
+    // until maps, the rest by price.
+    expect(hit(gem('Arc', 5, 0, { areaLevel: 30 }))).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
+    expect(hit(gem('Arc', 5, 5, { areaLevel: 50 }))).toMatchObject({ type: CURRENCY_TYPE, tier: 's1' })
+    expect(hit(gem('Arc', 5, 0, { areaLevel: 50 }))?.visibility).toBe('Hide')
+    // A gem worth more keeps its louder step.
+    expect(hit(gem('Arc', 21, 20, { corrupted: true, areaLevel: 30 }))).toMatchObject({ tier: 's4' })
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 })

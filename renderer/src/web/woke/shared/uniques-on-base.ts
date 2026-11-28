@@ -48,6 +48,12 @@ export function basesOfUnique (name: string): string[] {
   return loaded().basesOf.get(name) ?? []
 }
 
+// Every base with a unique on it, and its uniques (empty until the item
+// data has loaded).
+export function uniqueBases (): ReadonlyMap<string, string[]> {
+  return loaded().byBase
+}
+
 // Bases that drop as at least one unique.
 export function hasUniques (base: string): boolean {
   return uniquesOnBase(base).length > 0

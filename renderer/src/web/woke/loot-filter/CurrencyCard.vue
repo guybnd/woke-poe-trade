@@ -86,6 +86,10 @@
       <span :class="$style.lab">Collecting</span>
       <input type="checkbox" :checked="!!edit.min" @change="toggleCollect"> <span class="text-xs w-dim">every stack shows at least Normal</span>
     </label>
+    <label v-if="LV_KINDS.has(kindOf(it.cat))" :class="$style.row" data-currency-card-levelling>
+      <span :class="$style.lab">Levelling</span>
+      <input type="checkbox" :checked="!!lvCurrencyOf(cfg, it.name)" @change="setLvCurrency(cfg, it.name, !lvCurrencyOf(cfg, it.name))"> <span class="text-xs w-dim">shows at least Normal below maps</span>
+    </label>
     <div v-if="floorLine" class="text-xs w-dim" data-currency-card-floor>{{ floorLine }}</div>
 
     <div :class="$style.fold">
@@ -112,6 +116,7 @@ import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
 import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { toggleNotAvg } from './currency-settings'
+import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
 import { cssColour } from './label-style'
 import { DROP_WEIGHT } from './economy'
@@ -119,7 +124,7 @@ import { cardFacts, loadCardFacts } from './card-facts'
 import { loadOwnTables, ownTables } from './own-lists'
 import { gemLinesOf } from './gem-classes'
 import { LEAGUE_SECTIONS } from './league-classes'
-import { gemItemFor, itemFor, lootFocus } from './loot-focus'
+import { gemItemFor, itemFor, lootFocus, notItsRarity } from './loot-focus'
 import { evalCondition } from './match'
 import type { ItemFacts } from './item-facts'
 import type { CStep, CurrencyItem, ItemEdit, SectionMode } from './currency-weights'
@@ -167,6 +172,8 @@ const UNIQUES_HELP = `Every unique this base can drop as, with its chance, price
 - A chase unique is never in the average: the base shows in Chase uniques.`
 
 const cfg = computed(() => props.config.presets.currency)
+// Kinds the levelling floor covers (levelling.ts): the main currency compile.
+const LV_KINDS = new Set(['currency', 'fragments', 'cards'])
 const eff = computed(() => scaled(cfg.value, props.store.doc.value?.strictness ?? null))
 // The item as the filter lists it, with poe.ninja's price (none of yours).
 const raw = computed<CurrencyItem | null>(() => {
@@ -176,9 +183,13 @@ const raw = computed<CurrencyItem | null>(() => {
   loadCardFacts()
   loadOwnTables()
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
-  if (!props.gem) return itemFor(all, props.name, props.rule) ?? rowFor(all) ?? null
+  if (!props.gem) {
+    const hit = itemFor(all, props.name, props.rule)
+    return (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+  }
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
+const wrongRarity = (i: CurrencyItem) => notItsRarity(i, props.facts?.rarity)
 // A row whose BaseTypes and conditions fit the item; the dearest first, as
 // the rules go loudest first.
 function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
@@ -186,7 +197,7 @@ function rowFor (all: CurrencyItem[]): CurrencyItem | undefined {
   if (!f) return undefined
   return all
     // A row for a whole class (Sanctum research, charts) has no BaseTypes.
-    .filter(i => (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
+    .filter(i => !wrongRarity(i) && (i.bts?.length === 0 ? i.cls === f.itemClass : (i.bts ?? [i.bt ?? i.name]).includes(props.name)) && (i.conds ?? []).every(x => evalCondition(x, f) !== false))
     .sort((a, b) => b.chaos - a.chaos)[0]
 }
 // The row's name on the Loot tab ("Arc 20/20" for a gem band).
@@ -240,7 +251,7 @@ function setSecMode (v: string) {
   cfg.value.catMode = next
 }
 // A jewel row's fixed step (no price) reads as Always, or Off for step 0.
-const fixed = computed(() => it.value ? fixedOf(it.value, edit.value) : undefined)
+const fixed = computed(() => it.value ? fixedOf(it.value, edit.value, secMode.value as SectionMode) : undefined)
 const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])

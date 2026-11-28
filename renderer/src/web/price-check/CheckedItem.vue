@@ -26,6 +26,7 @@
       <price-trend v-if="showTrendCard && !ninjaCardOpen" inline
         :item="item"
         :filters="itemFilters" />
+      <woke-base-ninja-chip v-if="item.rarity !== 'Unique'" :item="item" :league="itemFilters.trade.league" @search="rollPresets?.runBase()" />
     </filter-name>
     <woke-map-strip :item="item" :stats="itemStats" :filters="itemFilters" :worth="isNightmareMap" :add-mods="!presets.some(p => p.active && p.id === 'filters.preset_bulk')" class="mb-2">
       <!-- woke: a Nightmare Map's worth sits under the map section (Guy's pick A, 2026-11-21). -->
@@ -60,7 +61,7 @@
       @preset="selectPreset"
       @submit="doSearch = true">
       <template #rolls>
-        <woke-roll-presets :stats="rowStats" :item="item" :league="itemFilters.trade.league" @apply="searchAfterPreset" />
+        <woke-roll-presets ref="rollPresets" :stats="rowStats" :item="item" :filters="itemFilters" :league="itemFilters.trade.league" @apply="searchAfterPreset" />
       </template>
     </filters-block>
     <!-- woke: over the old results' toolbar, so the listings stay where they are. -->
@@ -207,6 +208,7 @@ export default defineComponent({
     // Loaded on the first check: out of startup (it brings the build model).
     WokeBuildFitChip: defineAsyncComponent(() => import('@/web/woke/pob-builds/BuildFitChip.vue')),
     WokeHighRollChip: defineAsyncComponent(() => import('@/web/woke/price-insight/HighRollChip.vue')),
+    WokeBaseNinjaChip: defineAsyncComponent(() => import('@/web/woke/price-insight/BaseNinjaChip.vue')),
     WokeFilterVerdictChip,
     WokeDeckVerdictChip: defineAsyncComponent(() => import('@/web/woke/stacked-decks/DeckVerdictChip.vue')),
     PricePrediction,
@@ -359,6 +361,7 @@ export default defineComponent({
     const filtersComponent = ref<ComponentPublicInstance>(null!)
     // FilterName.vue, which holds the tiles and chips
     const nameComponent = ref<ComponentPublicInstance>(null!)
+    const rollPresets = ref<{ runBase: () => void } | null>(null)
 
     watch(() => props.item, (item, prevItem) => {
       cancelSearchHover()
@@ -673,6 +676,7 @@ export default defineComponent({
       tradeService,
       filtersComponent,
       nameComponent,
+      rollPresets,
       showPredictedPrice,
       show,
       handleSearchMouseenter,
