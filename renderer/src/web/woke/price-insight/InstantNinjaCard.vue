@@ -24,18 +24,19 @@
           <span :class="$style.arr">⇄</span>
           <span :class="[$style.side, $style.them]"><span>{{ r.right.n }}</span><img v-if="sideIcon(r.right.of)" :src="sideIcon(r.right.of)" :alt="sideName(r.right.of)" :class="$style.coin"></span>
         </div>
-        <div v-if="!rates.length" :class="$style.rate" data-testid="instant-ninja-price">—</div>
+        <div v-if="!rates.length" :class="[$style.rate, { [$style.none]: !info }]" data-testid="instant-ninja-price">{{ info ? '—' : 'No poe.ninja price yet' }}</div>
         <div v-if="stack" :class="$style.line" data-testid="instant-ninja-stack">Your {{ have }} = <span :class="$style.fg"><w-price-text :text="stack" /></span></div>
         <!-- How sure poe.ninja's price is: Net worth's fake-price checks (ninja-trust.ts, WOKEPOET-534). -->
         <div v-if="doubtLine" :class="$style.doubt" data-testid="instant-ninja-doubt" :data-doubt="doubt?.kind"><w-price-text :text="doubtLine" /></div>
       </section>
       <!-- The item's own verdict, where it has one (Stacked Deck: open or sell). -->
       <section v-if="$slots.verdict" :class="$style.block"><slot name="verdict" /></section>
-      <!-- A divination card: where it drops. -->
-      <section v-if="item.category === ItemCategory.DivinationCard" :class="$style.block"><CardDrops :name="item.info.refName" compact /></section>
+      <!-- A divination card: what its full set gives and is worth, then where it drops. -->
+      <section v-if="isCard" :class="$style.block"><CardSetLine :name="item.info.refName" :chaos="info?.chaos ?? null" /></section>
+      <section v-if="isCard" :class="$style.block"><CardDrops :name="item.info.refName" compact /></section>
       <!-- Live offers only add something when poe.ninja's price is in doubt (Guy, 2026-11-25:
            "not sure price check actually even matters"). Space and the hotkey again always work. -->
-      <button v-if="doubt" type="button" :class="$style.pc" data-testid="instant-ninja-live" :title="liveTitle" @click="$emit('live')">
+      <button v-if="doubt || !info" type="button" :class="$style.pc" data-testid="instant-ninja-live" :title="liveTitle" @click="$emit('live')">
         Price check<w-kbd keys="Space" :class="$style.kbd" /><span :class="$style.slash">/</span><svg :class="$style.lmb" viewBox="0 0 12 16" width="11" height="15" aria-label="left click"><rect x="0.75" y="0.75" width="10.5" height="14.5" rx="5.25" fill="none" stroke="currentColor" stroke-width="1.3" /><path d="M6 0.75 V6.5 H0.75 V6 A5.25 5.25 0 0 1 6 0.75 Z" fill="currentColor" /></svg>
       </button>
     </div>
@@ -96,6 +97,7 @@ import { WSpark, WKbd, WPriceText, agoPhrase, vItemTip } from '../ui'
 import { wheelStep } from '../dock/wheel'
 
 const CardDrops = defineAsyncComponent(() => import('../card-drops/CardDrops.vue'))
+const CardSetLine = defineAsyncComponent(() => import('./CardSetLine.vue'))
 
 const props = defineProps<{
   item: ParsedItem
@@ -132,6 +134,7 @@ const info = computed(() => {
 // Guy's wording (2026-11-22); the key shows boxed under it (title-tip.ts).
 const badgeTip = computed(() => `This is used to provide instant pricing without any delay. For live data, press${props.againKeys ? ' the price check key again' : ''}:`)
 
+const isCard = computed(() => props.item.category === ItemCategory.DivinationCard)
 const isDivine = computed(() => props.item.info.refName === 'Divine Orb')
 // A corpse's spectre, read only for a corpse.
 const corpse = shallowRef<TipCorpse | null>(null)
@@ -441,6 +444,7 @@ onUnmounted(() => {
 .them { justify-content: flex-start; }
 .arr { color: var(--w-dim); font-size: var(--w-fs-sm); }
 .coin { width: 1.3em; height: 1.3em; object-fit: contain; }
+.none { display: block; text-align: center; color: var(--w-dim); font-family: inherit; font-size: calc(15px * var(--w-text-scale, 1)); }
 .doubt { color: var(--w-warn, #e0a03c); max-width: 18rem; }
 .fg { color: var(--w-r-magic, #8888ff); }
 /* The graph box and, for a divine, its parts in chaos: side by side under the card. */

@@ -118,8 +118,32 @@ test('divination card: the instant card shows the poe.ninja price and no trade s
   const card = overlay.page.getByTestId('instant-ninja-card')
   await expect(card).toContainText('The Doctor')
   await expect(card.getByTestId('instant-ninja-stack')).toContainText('Your 2 =')
+  // What the full set gives, and its price against the reward's (Guy, 2026-11-28).
+  const set = card.getByTestId('instant-card-set')
+  await expect(set).toContainText('Full set of 8 gives')
+  await expect(set).toContainText('Headhunter')
+  await expect(set.getByTestId('instant-card-set-sum')).toContainText('8 cards 40 div')
+  await expect(set.getByTestId('instant-card-set-sum')).toContainText('reward 50 div')
+  await expect(set.getByTestId('instant-card-set-gain')).toHaveText('+25%')
   await overlay.snap('the doctor instant check')
   expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
+})
+
+test('divination card poe.ninja has no price for: the quick card shows its set, and Space searches', async ({ overlay, fakeApp }) => {
+  await overlay.boot()
+  await overlay.copyItem('items/card-the-calling.txt')
+  const card = overlay.page.getByTestId('instant-ninja-card')
+  await expect(card).toContainText('The Calling')
+  await expect(card.getByTestId('instant-ninja-price')).toHaveText('No poe.ninja price yet')
+  await expect(card.getByTestId('instant-card-set')).toContainText('Full set of 6 gives')
+  await expect(card.getByTestId('instant-card-set')).toContainText('Beyond Item')
+  await expect(card.getByTestId('instant-card-set-sum')).toHaveCount(0)
+  await expect(card.getByTestId('instant-ninja-live')).toBeVisible()
+  await overlay.snap('the calling instant check, no price')
+  expect(fakeApp.requests.some(r => r.url.includes('/api/trade/search/'))).toBe(false)
+  await overlay.page.keyboard.press('Space')
+  await expect(card).toHaveCount(0)
+  await expect(overlay.page.locator('#price-window')).toBeVisible()
 })
 
 test('divination card: the window says a live check uses one trade search, and runs none', async ({ overlay, fakeApp }) => {
