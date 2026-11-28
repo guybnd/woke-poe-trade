@@ -60,16 +60,20 @@ describe('day-1 prices', () => {
       firstDays: (p: Array<{ daysAgo: number, value: number }>) => number | null
     }
     const now = Date.parse('2026-11-28T06:00:00Z')
-    const d = { pairs: [{ id: 'divine', history: [] }, { id: 'chaos', history: [
-      { timestamp: '2026-11-28T00:00:00Z', rate: 9 },
-      { timestamp: '2026-10-31T00:00:00Z', rate: 30 },
-      { timestamp: '2026-10-30T00:00:00Z', rate: 50 },
-      { timestamp: '2026-10-29T00:00:00Z', rate: 40 }
-    ] }] }
+    const d = {
+      pairs: [{ id: 'divine', history: [] }, {
+        id: 'chaos',
+        history: [
+          { timestamp: '2026-11-28T00:00:00Z', rate: 9 },
+          { timestamp: '2026-10-31T00:00:00Z', rate: 30 },
+          { timestamp: '2026-10-30T00:00:00Z', rate: 50 },
+          { timestamp: '2026-10-29T00:00:00Z', rate: 40 }
+        ]
+      }]
+    }
     const pts = exchangePoints(d, now)
     expect(pts[0]).toEqual({ daysAgo: 0, value: 9 })
     expect(firstDays(pts)).toBe(40)
     expect(exchangePoints(null, now)).toEqual([])
   })
 })
-
