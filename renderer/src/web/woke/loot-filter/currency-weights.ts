@@ -241,7 +241,7 @@ function thinPrice (p: number, guess: number): number {
 export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits: Record<string, ItemEdit> = {}, cards: CardFacts | null = null, gems: readonly GemLine[] | null = null, lists: OwnTables | null = null): CurrencyItem[] {
   const seen = new Map<string, CurrencyItem>()
   const find = (type: string, name: string) => lookup?.(groupOf(type), name) ?? lookup?.(ANY_PAGE, name) ?? null
-  for (const b of itemSource(doc.blocks, lists, lookup, groupOf, ANY_PAGE)) {
+  for (const b of itemSource(doc.blocks, lists, lookup, groupOf, ANY_PAGE, UNIQUE_PAGE)) {
     // NeverSink's fragment rules: league threads (Guy counts them as
     // currency) and the fragments (their own class on the Loot tab).
     const frags = b.type === 'fragments'
@@ -255,7 +255,10 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       for (const name of bt.values) {
         if (seen.has(name)) continue
         const p = lookup?.(UNIQUE_PAGE, name) ?? null
-        const guess = uniqueGuess(b.tier)
+        // Last league's usual price (its first days' for Early league),
+        // else NeverSink's tier guess.
+        const last = lists?.rules?.baseGuess(lists, name) ?? null
+        const guess = last ? (ucat === 'uniqearly' ? Math.max(last.chaos, last.first) : last.chaos) : uniqueGuess(b.tier)
         const priced = p != null && !p.thin && p.chaos > 0
         // Early league: a thin price never takes it below the guess.
         const thin = p != null && p.chaos > 0 ? (ucat === 'uniqearly' ? Math.max(guess, p.chaos) : thinPrice(p.chaos, guess)) : guess
