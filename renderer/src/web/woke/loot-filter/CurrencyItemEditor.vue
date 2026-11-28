@@ -17,7 +17,7 @@
       <button type="button" class="w-icon-btn" :disabled="!Object.keys(edit).length" title="Let the price decide again: clears your step, price, stack and look" aria-label="Let the price decide again"
         @click="emit('change', null)"><i class="fas fa-undo" aria-hidden="true" /></button>
     </div>
-    <div v-if="it.uniques && it.uniques.length > 1" :class="$style.line" data-loot-avg-uniques>
+    <div v-if="!noAvg && it.uniques && it.uniques.length > 1" :class="$style.line" data-loot-avg-uniques>
       <span :class="$style.lab" title="Untick a unique to leave it out of this base's average drop (a special drop you never see)">In the average</span>
       <label v-for="u in it.uniques" :key="u.name" :class="[$style.uq, { [$style.uqOut]: !u.counted }]" :title="u.chase ? 'Chase (T0): never in the average, the base shows in Chase uniques' : u.out ? 'Left out of the average' : u.counted ? 'Counted in the average' : 'Not counted'">
         <input type="checkbox" :checked="!u.out" :disabled="u.chase && !u.out" :aria-label="`Count ${u.name} in the average`" data-loot-not-avg @change="emit('notAvg', u.name)">
@@ -46,6 +46,8 @@ const props = defineProps<{
   basePrice: number
   // How its step and category look, for the own look to start from.
   baseLook: StylePatch
+  // The Alt+F card lists the uniques itself.
+  noAvg?: boolean
 }>()
 const emit = defineEmits<{ change: [edit: ItemEdit | null], notAvg: [name: string] }>()
 const RARITY = ['extremely rare', 'very rare', 'very rare', 'rare', 'uncommon', 'common']
