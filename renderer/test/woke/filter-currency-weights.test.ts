@@ -366,9 +366,27 @@ describe('currency weights', () => {
     const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
     const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
     const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
-    // Maps (Guy's B): black on white at Decent and Big, told apart by their tint's edge.
-    expect(fills('mapblight')).toEqual([[255, 255, 255], [255, 255, 255]])
-    expect(currencyLook(4, 'mapblight', c).border).not.toEqual(currencyLook(4, 'maporig', c).border)
+    // Special maps (pick A): a pale tint card on Decent, the full tint on Big
+    // with a white edge, never a plain map's white.
+    expect(fills('mapblight')).toEqual([[182, 227, 143], [150, 215, 95]])
+    expect(currencyLook(4, 'mapblight', c).border?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapblight', c).background).not.toEqual(currencyLook(4, 'maporig', c).background)
+    for (const cat of ['mapend', 'mapguard', 'maporig', 'mapmods', 'mapcorr', 'mapblight', 'mapravaged']) {
+      for (const s of [2, 3, 4] as const) expect(currencyLook(s, cat, c).background?.slice(0, 3)).not.toEqual([255, 255, 255])
+    }
+    // A dark colour you pick for a section gets white text on Big.
+    const dark = { ...c, cats: { ...c.cats, mapguard: { text: [60, 30, 90, 255] } } } as typeof c
+    expect(currencyLook(4, 'mapguard', dark).text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(currencyLook(4, 'mapguard', c).text?.slice(0, 3)).toEqual([0, 0, 0])
+    // The Style picker: a dark card, or white with the tint on the edge.
+    const dk = currencyLook(4, 'maporig', { ...c, mapLook: 'dark' })
+    expect(dk.text?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(dk.border?.slice(0, 3)).toEqual([255, 225, 120])
+    const wh = currencyLook(3, 'maporig', { ...c, mapLook: 'edge' })
+    expect(wh.background?.slice(0, 3)).toEqual([255, 255, 255])
+    expect(wh.border?.slice(0, 3)).toEqual([255, 225, 120])
+    expect(normalizeCurrency({ mapLook: 'dark' } as never).mapLook).toBe('dark')
+    expect(normalizeCurrency({ mapLook: 'bogus' } as never).mapLook).toBeUndefined()
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])

@@ -103,7 +103,7 @@ describe('special maps on the Loot tab', () => {
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
   })
 
-  it('special maps are black on white from Normal up, edged in their tint, with a square icon', () => {
+  it('special maps are black on their tint from Normal up, with a square icon', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     const doc = parseFilter(REGULAR)
@@ -113,8 +113,8 @@ describe('special maps on the Loot tab', () => {
     expect(m.final?.block.tier).toBe('s4')
     const act = (k: string) => m.final?.block.actions.find(a => a.key === k)?.args
     expect(act('SetTextColor')?.slice(0, 3)).toEqual(['0', '0', '0'])
-    expect(act('SetBackgroundColor')?.slice(0, 3)).toEqual(['255', '255', '255'])
-    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['200', '165', '255'])
+    expect(act('SetBackgroundColor')?.slice(0, 3)).toEqual(['200', '165', '255'])
+    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['255', '255', '255'])
     expect(act('MinimapIcon')?.slice(1)).toEqual(['Purple', 'Square'])
   })
 

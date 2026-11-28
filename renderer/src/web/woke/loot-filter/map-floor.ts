@@ -45,10 +45,11 @@ export function applyMapFloor (doc: FilterDoc, cfg: Pick<CurrencySettings, 'on' 
 
 // Normal maps' look (Guy's B, 2026-11-28): the black on white map players
 // know, darker for lower tiers, and a white square icon (NeverSink's red one
-// read as Tink). Only NeverSink's plain tier rules; size, sound and beam stay
+// read as Tink). T16's edge is grey, not gold: a coloured card or edge means
+// a special map (Guy 2026-11-28). Only NeverSink's plain tier rules; size, sound and beam stay
 // its own, and your restyles still go on top.
 export const MAP_BANDS: Array<{ from: number, style: StylePatch }> = [
-  { from: 16, style: { text: [0, 0, 0, 255], border: [230, 190, 40, 255], background: [255, 255, 255, 255] } },
+  { from: 16, style: { text: [0, 0, 0, 255], border: [150, 150, 150, 255], background: [255, 255, 255, 255] } },
   { from: 11, style: { text: [0, 0, 0, 255], border: [150, 150, 150, 255], background: [235, 235, 235, 255] } },
   { from: 6, style: { text: [0, 0, 0, 255], border: [120, 120, 120, 255], background: [190, 190, 190, 255] } },
   { from: 1, style: { text: [180, 180, 180, 255], border: [70, 70, 70, 255], background: [0, 0, 0, 200] } }
