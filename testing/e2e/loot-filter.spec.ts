@@ -1477,6 +1477,15 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await expect(page.locator('[data-equip-ranks] [data-lane="r1"]')).toBeVisible()
   await expect(page.getByRole('tab', { name: /Base ranks/ })).toHaveCount(0)
   await overlay.snap('equipment tab, base ranks')
+  // Special gear (Guy's pick B): our own rules for veiled, temple and league
+  // mods, variations, influenced gear and idols, each row at a fixed step.
+  await page.locator('[data-equip-class="special"]').click()
+  const veiled = page.locator('[data-currency-cat="sgveil"]')
+  await expect(veiled).toBeVisible()
+  await expect(page.locator('[data-currency-cat="sginfl"]')).toBeVisible()
+  await veiled.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
+  await expect(veiled.locator('[data-currency-item="Fractured with a veiled mod"]')).toContainText('Big')
+  await overlay.snap('equipment tab, special gear')
 })
 
 test('Rare weights: Alt + F on a utility flask opens the same score card', async ({ overlay, fakeApp }) => {
@@ -1596,15 +1605,6 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('loot tab, league')
   await logs.locator('[data-loot-section-mode]').getByRole('button').click()
   await page.getByRole('menuitemradio', { name: /^By price/ }).click()
-  // Special gear: our own rules for veiled, temple and league mods,
-  // variations, influenced gear and idols, each row at a fixed step.
-  await page.locator('[data-loot-class="special"]').click()
-  const veiled = page.locator('[data-currency-cat="sgveil"]')
-  await expect(veiled).toBeVisible()
-  await expect(page.locator('[data-currency-cat="sginfl"]')).toBeVisible()
-  await veiled.locator('[aria-expanded]').first().click({ position: { x: 12, y: 10 } })
-  await expect(veiled.locator('[data-currency-item="Fractured with a veiled mod"]')).toContainText('Big')
-  await overlay.snap('loot tab, special gear')
   // Recipes: each vendor recipe Off or the step it shows at in maps, by
   // default the step its reward's price reaches (By price).
   await page.locator('[data-loot-class="recipes"]').click()
