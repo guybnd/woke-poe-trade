@@ -45,6 +45,15 @@ history:
     date: '2026-11-28T11:45:03.785Z'
     selfAttested: true
     id: c-2026-11-28t11-45-03-785z
+  - type: comment
+    user: Agent
+    comment: >-
+      PR 1109 merged (ca1f803): exotic bases never Large, identified items' top
+      5 mods per class, flask line 4 and Iron Flask Top.
+      https://github.com/guybnd/woke-poe-trade/pull/1109
+    date: '2026-11-28T11:56:35.422Z'
+    selfAttested: true
+    id: c-2026-11-28t11-56-35-422z
 needsAction: null
 ---
 Scope per the plan page: https://claude.ai/artifact/ADHxqYmDL51xGAoivNEDZt
