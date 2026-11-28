@@ -322,21 +322,7 @@
           <WButton v-if="p.block.type && p.block.tier" size="sm" variant="ghost" @click="jumpTo(p.block.type!, p.block.tier!)">Open rule</WButton>
         </div>
       </div>
-      <template v-if="store.timeline.value.steps.length">
-        <div class="flex items-center gap-2" :class="$style.historyLabel">
-          <span class="w-group-label" style="padding: 0;">History</span>
-          <span class="w-faint text-xs">newest first</span>
-          <span class="grow" />
-          <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="store.timeline.value.at === 0" title="Undo" data-tip-keys="Ctrl + Z" @click="store.undoStep()">Undo</WButton>
-          <WButton size="sm" variant="ghost" icon="fas fa-redo" :disabled="store.timeline.value.at >= store.timeline.value.steps.length" title="Redo" data-tip-keys="Ctrl + Y" @click="store.redoStep()">Redo</WButton>
-        </div>
-        <div v-for="s in shownSteps" :key="s.n" :class="[$style.changeRow, { [$style.undone]: s.n >= store.timeline.value.at }]">
-          <span class="grow min-w-0 w-trunc" :title="s.label">{{ s.label }}</span>
-          <span class="w-faint text-xs w-num" :title="new Date(s.step.ts).toLocaleString()">{{ agoPhrase(s.step.ts) }}</span>
-          <WButton v-if="s.n + 1 !== store.timeline.value.at" size="sm" variant="ghost" title="Your settings go back to right after this step. You can redo." @click="store.goToStep(s.n + 1)">{{ s.n >= store.timeline.value.at ? 'Redo to here' : 'Back to here' }}</WButton>
-          <WButton v-else size="sm" variant="ghost" @click="store.undoStep()">Undo</WButton>
-        </div>
-      </template>
+      <HistoryList :store="store" data-goto-spot="history" />
       <div class="w-group-label" v-if="config.edits.length || activePriceMoves" :class="$style.historyLabel">In effect now</div>
       <div v-if="activePriceMoves" :class="$style.changeRow">
         <i class="fas fa-chart-line w-dim" />
@@ -444,7 +430,7 @@ import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
 import NeverSinkTab from './NeverSinkTab.vue'
 import { LEVEL_NAMES } from './strictness'
-import { describeSavedStep } from './timeline'
+import HistoryList from './HistoryList.vue'
 import { exampleItem } from './example-item'
 import { describeProblem } from './validate'
 import StyleEditor from './StyleEditor.vue'
@@ -1511,16 +1497,6 @@ function useShared (how: 'add' | 'replace') {
   shareInput.value = ''
 }
 
-// Newest first, with each step's place in the list.
-// Worked out again from each step's change, so older steps name their items too.
-const stepLabels = new WeakMap<object, string>()
-function stepLabel (step: Parameters<typeof describeSavedStep>[0]): string {
-  let label = stepLabels.get(step)
-  if (label == null) stepLabels.set(step, label = describeSavedStep(step, props.store.sourceLook))
-  return label
-}
-const shownSteps = computed(() => props.store.timeline.value.steps.map((step, n) => ({ step, n, label: stepLabel(step) })).reverse())
-
 const unsaved = computed(() => props.store.dirty.value && !props.store.error.value)
 const groupHiddenByMe = computed(() => props.config.edits.some(e => e.kind === 'group' && e.type === selType.value))
 function toggleGroup () {
@@ -1940,7 +1916,6 @@ function openFolder () {
   gap: 4px;
   border-bottom: 1px solid var(--w-line-soft);
 }
-.undone { opacity: 0.45; }
 .historyLabel {
   padding: 12px var(--w-pad) 4px;
 }
