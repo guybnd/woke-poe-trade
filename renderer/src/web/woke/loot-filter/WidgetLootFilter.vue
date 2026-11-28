@@ -182,10 +182,13 @@ function ensureLoaded () {
 // Never set up: read nothing until it's first used, so an overlay you haven't
 // touched stays quiet.
 if (props.config.sourceName || props.config.neversink.on || props.config.wmWants === 'show') ensureLoaded()
+// Show me on a Loot tab section or item: open the editor there.
+const openEditor = () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) }
+const lootSpot = (tier: string) => () => { openEditor(); focus.value = { type: 'woke->currency', tier } }
 // What's new's Show me: the editor, with its profile chip.
 useGoto(props.config, 'woke-loot-filter', {
-  editor: () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}) },
-  spots: { 'loot-gold': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'cat:gold:' } }, 'profiles': () => {}, 'gear-ranks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); askGearRanks() }, 'over-quality-look': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); openTab.value = { tab: 'gear' } }, 'league-always': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'lgchron' } }, 'section-steps': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'cat:orbs:Chaos Orb' } }, 'section-ruler': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'cat:orbs:Chaos Orb' } }, 'map-looks': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); focus.value = { type: 'woke->currency', tier: 'mapfloor' } }, 'history': () => { mode.value = 'editor'; ensureLoaded()?.catch(() => {}); openTab.value = { tab: 'changes' } } }
+  editor: openEditor,
+  spots: { 'loot-gold': lootSpot('cat:gold:'), 'profiles': () => {}, 'gear-ranks': () => { openEditor(); askGearRanks() }, 'over-quality-look': () => { openEditor(); openTab.value = { tab: 'gear' } }, 'league-always': lootSpot('lgchron'), 'section-steps': lootSpot('cat:orbs:Chaos Orb'), 'section-ruler': lootSpot('cat:orbs:Chaos Orb'), 'map-looks': lootSpot('mapfloor'), 'jewels-no-price': lootSpot('jewplain'), 'history': () => { openEditor(); openTab.value = { tab: 'changes' } } }
 })
 
 // A change Claude suggested, applied from the Suggestions card: added like an
