@@ -23,8 +23,10 @@ const DYNAMIC: Record<string, string> = {
   'settings/ModulePage.vue :hint="m.description"': 'module descriptions, checked by the module list test below',
   'settings/ScreenPage.vue :hint="m.description"': 'module descriptions, checked by the module list test below',
   'settings/ScreenPage.vue :hint="f.off ? \'Module off\' : undefined"': 'two words',
-  'session-story/MapHistory.vue showHelp(text)': 'the texts come from the tip() calls in the same file, which are scanned',
-  'session-story/NightCard.vue showHelp(text)': 'the texts come from the tip() calls in the same file, which are scanned'
+  'session-story/MapHistory.vue tip($event, readTip(line.read))': 'one sentence: the stash read\'s time and change',
+  'session-story/NightCard.vue tip($event, partTitle(p))': 'a map name, clock and deaths',
+  'session-story/NightCard.vue tip($event, profit.from)': 'a short "From …" line',
+  'session-story/NightCard.vue tip($event, OUT_TIPS[r.label])': 'OUT_TIPS: one line each'
 }
 
 function sources (dir: string): string[] {
@@ -37,6 +39,10 @@ function sources (dir: string): string[] {
 
 // JS string literals in an expression, each ${…} filled with the longest text it
 // could hold (a nested literal) or a short stand-in number.
+// The script of the file being scanned, for ${name} in a template.
+let SCRIPT = ''
+const resolving = new Set<string>()
+
 function literals (expr: string): string[] {
   const out: string[] = []
   let i = 0
@@ -66,7 +72,15 @@ function literals (expr: string): string[] {
           else if (c === '`') { readTemplate(); continue } else if (c === '\'' || c === '"') { readQuoted(c); continue }
           i++
         }
-        const inner = literals(expr.slice(start, i - 1))
+        const body = expr.slice(start, i - 1)
+        let inner = literals(body)
+        // ${how}: what a local const of that name can hold.
+        const name = /^\s*([A-Za-z_$][\w$]*)(?:\.value)?\s*$/.exec(body)?.[1]
+        if (!inner.length && name && resolving.size < 4 && !resolving.has(name)) {
+          resolving.add(name)
+          inner = resolveName(SCRIPT, name) ?? []
+          resolving.delete(name)
+        }
         s += inner.sort((a, b) => b.length - a.length)[0] ?? '12'
         continue
       }
@@ -136,7 +150,18 @@ function resolveName (file: string, name: string): string[] | null {
     const lits = literals(rest.slice(0, end))
     return lits.length ? lits : null
   }
-  if (!/^[`'"]/.test(rest)) return null
+  // a ? 'x' : 'y', over one or more lines: every text it can be.
+  if (!/^[`'"]/.test(rest)) {
+    let end = 0
+    while (end < rest.length) {
+      const c = rest[end]
+      if (c === '\'' || c === '"' || c === '`') { end = skipString(rest, end); continue }
+      if (c === '\n' && !/^\s*[?:+]/.test(rest.slice(end + 1)) && !/[?:+(]\s*$/.test(rest.slice(0, end))) break
+      end++
+    }
+    const lits = literals(rest.slice(0, end))
+    return lits.length ? lits : null
+  }
   // One literal, or several joined with +: up to the first line break outside
   // a string that has no + on either side.
   let end = 0
@@ -185,6 +210,7 @@ function collect () {
     const rel = path.relative(ROOT, file).replace(/\\/g, '/')
     const src = readFileSync(file, 'utf8')
     const script = src.match(/<script[\s\S]*?<\/script>/g)?.join('\n') ?? ''
+    SCRIPT = script
     const uses = [
       ...tags(src, /<(WInfo|w-info)\b/g).flatMap(t => attrValues(t, 'text').map(v => ({ ...v, attr: 'text' }))),
       ...tags(src, /<(WSettingRow|w-setting-row)\b/g).flatMap(t => attrValues(t, 'hint').map(v => ({ ...v, attr: 'hint' })))
@@ -200,15 +226,22 @@ function collect () {
       if (resolved != null) resolved.forEach(text => found.push({ where: `${rel} ${name}`, text }))
       else unread.push(where)
     }
-    // Help cards opened by hand: tip($event, '…') feeds showHelp.
+    // Help cards opened by hand: tip($event, …) feeds showHelp.
     if (/showHelp\(/.test(script)) {
-      dynamicSeen.add(`${rel} showHelp(text)`)
       for (const m of src.matchAll(/\btip\(\$event,\s*/g)) {
         const start = m.index! + m[0].length
         let depth = 1
         let i = start
         for (; i < src.length && depth; i++) { if (src[i] === '(') depth++; else if (src[i] === ')') depth-- }
-        literals(src.slice(start, i - 1)).forEach(text => found.push({ where: `${rel} tip()`, text }))
+        const arg = src.slice(start, i - 1).trim()
+        const where = `${rel} tip($event, ${arg})`
+        if (DYNAMIC[where]) { dynamicSeen.add(where); continue }
+        const lits = literals(arg)
+        if (lits.length) { lits.forEach(text => found.push({ where: `${rel} tip()`, text })); continue }
+        const name = /^([A-Za-z_$][\w$]*)$/.exec(arg)?.[1]
+        const resolved = name ? resolveName(script, name) : null
+        if (resolved != null) resolved.forEach(text => found.push({ where: `${rel} ${name}`, text }))
+        else unread.push(where)
       }
     }
   }
@@ -255,7 +288,7 @@ describe('help format A', () => {
 
   it('checks module descriptions, shown as Settings hints', async () => {
     const files = sources(ROOT).filter(f => f.endsWith('.ts'))
-    const descriptions = files.flatMap(f => [...readFileSync(f, 'utf8').matchAll(/\bdescription:\s*('(?:[^'\\]|\\.)*'|`[^`]*`)/g)].map(m => ({ where: path.relative(ROOT, f), text: literals(m[1])[0] })))
+    const descriptions = files.flatMap(f => [...readFileSync(f, 'utf8').matchAll(/\bdescription:\s*('(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`[^`]*`)/g)].map(m => ({ where: path.relative(ROOT, f), text: literals(m[1])[0] })))
     const bad = descriptions.map(d => ({ ...d, problems: helpProblems(d.text) })).filter(d => d.problems.length).map(d => `${d.where}: ${d.problems.join('; ')}`)
     expect(bad).toEqual([])
   })

@@ -13,7 +13,7 @@
       </slot>
     </template>
     <span class="w-dim">While in a map</span>
-    <WToggle v-model="glance" title="A thin bar at the top: the map, its time, maps and profit so far, and each map's result. Never takes the mouse; drag it with the overlay open.">Glance bar</WToggle>
+    <WToggle v-model="glance" title="A thin bar at the top: the map, its time, maps and profit so far (pick below), each map's result. While you play it never takes the mouse.">Glance bar</WToggle>
     <GlanceSettings v-if="glance" :config="config" />
     <template v-if="showMe">
       <WButton size="sm" :class="$style.showMe" data-chip-show-me :disabled="place === 'off' || !canShow" @click="showMe">Show me with your last map</WButton>

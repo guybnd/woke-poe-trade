@@ -3,7 +3,7 @@
     <div :class="$style.top">
       <WToggle v-model="w.on">Weights decide endgame gear</WToggle>
       <span :class="$style.beta">Beta</span>
-      <WInfo text="In maps, scores white, unidentified magic and unidentified rare gear of item level 68+.
+      <WInfo text="Scores white, unidentified magic and unidentified rare gear of item level 68+.
 - Its rarity and base rank give points, times each thing it has: drop tier, item level, corruption, size, best mark.
 - Under the **line** it hides. Above it, **Normal**, **Big** and **Beam** start at scores you set.
 
