@@ -797,7 +797,7 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
   harvest: { text: [130, 230, 110], color: 'Green', shape: 'Circle' },
   embers: { text: [255, 130, 60], color: 'Orange', shape: 'Circle' },
   runegrafts: { text: [255, 120, 160], color: 'Pink', shape: 'Circle' },
-  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Moon' },
+  gold: { text: [255, 211, 90], color: 'Yellow', shape: 'Cross' },
   other: { text: [210, 190, 140], color: 'Grey', shape: 'Circle' }
 }
 
