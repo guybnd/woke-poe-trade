@@ -21,7 +21,7 @@ const UA = { 'User-Agent': 'woke-poe-trade day1-prices (GitHub Actions)' }
 // poe.ninja moved many pages to the exchange (currency) layout; each type
 // is tried there first, then as an item page.
 const CURRENCY_TYPES = ['Currency', 'Fragment', 'DivinationCard', 'Essence', 'Fossil', 'Resonator', 'Oil', 'DeliriumOrb', 'Omen', 'Tattoo', 'Scarab',
-  'Vial', 'Artifact', 'Runegraft', 'AllflameEmber', 'Astrolabe', 'Ducat', 'EnshroudingCrystal']
+  'Vial', 'Artifact', 'Runegraft', 'AllflameEmber', 'Astrolabe', 'Ducat', 'EnshroudingCrystal', 'Incubator', 'KalguuranRune', 'Coffin']
 // Exchange types with no exchange page go first, in their order.
 let itemNext = 0
 const ITEM_TYPES = [
@@ -78,6 +78,14 @@ export function typical (points) {
   if (!vals.length) return null
   const mid = Math.floor(vals.length / 2)
   return vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2
+}
+
+// An exchange details answer as history points: the chaos pair's dated rates.
+export function exchangePoints (d, now = Date.now()) {
+  const pair = (d?.pairs ?? []).find(p => p?.id === 'chaos')
+  return (pair?.history ?? [])
+    .map(h => ({ daysAgo: Math.round((now - Date.parse(h.timestamp)) / 86400e3), value: h.rate }))
+    .filter(p => Number.isFinite(p.daysAgo))
 }
 
 // A few requests at a time, so poe.ninja isn't hammered.
@@ -139,9 +147,35 @@ async function main () {
   const items = []
   const guesses = []
 
+  // poe.ninja's exchange pages (cards, essences, omens and most other stackable
+  // kinds): an overview of ids and names, then one details call per item whose
+  // chaos pair holds a dated history.
+  const EX = 'https://poe.ninja/poe1/api/economy/exchange/current'
+  async function exchangeType (type) {
+    const page = await get(`${EX}/overview?league=${q}&type=${type}`)
+    const list = page?.items ?? []
+    if (!list.length) return false
+    const rows = await pool(list.map(it => async () => {
+      const d = await get(`${EX}/details?league=${q}&type=${type}&id=${encodeURIComponent(it.id)}`)
+      const pts = exchangePoints(d)
+      const v = firstDays(pts)
+      const t = typical(pts)
+      return [v ? [type, it.name, '', round(v)] : null, t ? [type, it.name, '', round(t)] : null]
+    }))
+    for (const [r, g] of rows.filter(Boolean)) {
+      if (r) items.push(r)
+      if (g) guesses.push(g)
+    }
+    console.log(`${type} (exchange): ${rows.filter(r => r?.[0]).length} of ${list.length}`)
+    return rows.some(r => r?.[0])
+  }
+
   for (const type of CURRENCY_TYPES) {
     const page = await get(`${NINJA}/currency/overview?league=${q}&type=${type}`)
-    if (!page?.lines?.length) { ITEM_TYPES.splice(itemNext++, 0, type); continue }
+    if (!page?.lines?.length) {
+      if (!await exchangeType(type)) ITEM_TYPES.splice(itemNext++, 0, type)
+      continue
+    }
     const idOf = new Map((page.currencyDetails ?? []).map(d => [d.name, d.id]))
     const jobs = page.lines.map(line => ({ name: line.currencyTypeName, id: idOf.get(line.currencyTypeName), details: line.detailsId }))
     const url = await pickHistory([

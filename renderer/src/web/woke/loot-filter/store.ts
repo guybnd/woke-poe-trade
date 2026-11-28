@@ -313,7 +313,8 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
       // Read when the Loot tab's prices are on (a rebuild follows the read).
       cards: cfg().presets.currency.on ? cardsNow() : null,
       gems: cfg().presets.currency.on ? gemLines.value : null,
-      own: cfg().presets.currency.on ? ownNow() : null
+      own: cfg().presets.currency.on ? ownNow() : null,
+      ownBase: cfg().ownBase === true
     })
   }
 
@@ -563,6 +564,7 @@ export function useLootFilter (cfg: () => LootFilterWidget) {
 
   // Cluster jewel prices come in their own request.
   watch(clusterPrices, () => { if (baseText.value != null) rebuild() })
+  watch(() => cfg().ownBase, () => { if (baseText.value != null) rebuild() })
   watch(ownTables, () => { if (baseText.value != null && cfg().presets.currency.on) rebuild() })
   watch([prices.currentLeague, () => baseText.value != null], ([league, loaded]) => { if (loaded) loadClusterPrices(league) })
 

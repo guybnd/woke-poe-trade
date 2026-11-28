@@ -43,11 +43,17 @@ export interface OwnTables {
   rules?: typeof import('./own-rules')
 }
 
+// item-lists.json names each row's Class by its index in `classes`.
+export function readLists (json: unknown): ListRow[] {
+  const t = json as { classes?: string[], items?: Array<[string, number | string, string]> }
+  return (t.items ?? []).map(([name, c, art]) => [name, typeof c === 'number' ? t.classes?.[c] ?? '' : c, art])
+}
+
 export const ownTables = shallowRef<OwnTables | null>(null)
 let loading: Promise<void> | null = null
 export function loadOwnTables (): Promise<void> {
   loading ??= Promise.all([import('./item-lists.json'), import('./item-guesses.json'), import('./day1-prices.json'), import('./own-rules')]).then(([l, g, d, o]) => {
-    const lists = (l.default as unknown as { items: ListRow[] }).items ?? []
+    const lists = readLists(l.default)
     type Row = [type: string, name: string, variant: string, chaos: number]
     const read = (rows: Row[] | undefined, keep: (type: string) => boolean) => {
       const out = new Map<string, number>()
