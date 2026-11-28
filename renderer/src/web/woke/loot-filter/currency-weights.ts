@@ -27,7 +27,7 @@ import { topStepActions } from './top-step'
 import { FRAGMENT_CATEGORIES, FRAGMENT_IDS, FRAGMENT_LOOK, fragmentCategoryOf } from './fragment-classes'
 import { CARD_CATEGORIES, CARD_IDS, CARD_LOOK } from './card-classes'
 import type { CardFacts } from './card-classes'
-import { FOULBORN_PREFIX, FOULBORN_TYPE, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
+import { FOULBORN_PREFIX, FOULBORN_TYPE, SIXLINK_CAT, SIXLINK_LOOK, SPECIAL_ROLLS, UNIQUE_CATEGORIES, UNIQUE_CLS, UNIQUE_IDS, UNIQUE_LOOK, UNIQUE_MODES, chaseLookOf, foulCategoryOf, foulGuess, uniqueCategoryOf, uniqueGuess } from './unique-classes'
 import { GEM_CATEGORIES, GEM_IDS, GEM_LOOK, GEM_MODES, gemBand, gemCategoryOf } from './gem-classes'
 import { CHRONICLE, LEAGUE_CATEGORIES, LEAGUE_IDS, LEAGUE_LOOK, LEAGUE_MODES, LEAGUE_PRICED, LEAGUE_ROWS } from './league-classes'
 import { JEWEL_CATEGORIES, JEWEL_IDS, JEWEL_LOOK, JEWEL_MODES, JEWEL_ROWS, JEWEL_TYPE } from './jewel-classes'
@@ -424,8 +424,9 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       // NeverSink's any-base 6-link rule is one row (Guy's R1, 2026-11-28).
       // A random 6-linked unique is worth its 20 Fusings, not the best
       // 6-linked unique there is (Guy 2026-11-28: "any unique 6link should
-      // not be tink"): priced at the Fusings and never below Big. A base
-      // whose plain unique is worth more keeps that price (per).
+      // not be tink"): priced at the Fusings, never below Big, in the
+      // 6-links section's own look. A base whose plain unique is worth more
+      // keeps that price (per).
       if (!bt) {
         const name = `Any unique, ${label}`
         if (seen.has(name)) continue
@@ -443,7 +444,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
-          cat: 'uniqspec',
+          cat: links ? SIXLINK_CAT : 'uniqspec',
           chaos,
           est: own == null && (links ? !(fusing && fusing.chaos > 0) : top.p!.thin || Boolean(top.p!.day1)),
           ...(own != null ? { own: true } : {}),
@@ -468,9 +469,13 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
           cls: UNIQUE_CLS,
           type: 'uniques',
           tier: b.tier,
-          cat: 'uniqspec',
-          chaos: (own ?? (links ? Math.max(p.chaos, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
-          est: own == null && (p.thin || Boolean(p.day1)),
+          cat: links ? SIXLINK_CAT : 'uniqspec',
+          // A 6-link (Tabula) by its Fusings, or its base's plain unique
+          // when that's worth more, never its 6-link market: late in the
+          // league a 6-link Tabula is near worthless (Guy 2026-11-28).
+          chaos: (own ?? (links ? Math.max(seen.get(base)?.chaos ?? 0, linkFloor) : p.chaos)) * (edits[name]?.mult ?? 1),
+          est: own == null && (links ? !(fusing && fusing.chaos > 0) : p.thin || Boolean(p.day1)),
+          ...(links ? { floor: 4 as CStep } : {}),
           ...(own != null ? { own: true } : {}),
           full: 1,
           bt: base,
@@ -930,6 +935,20 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   // special look for itself"): one look below Tink whatever the price, picked
   // from CHASE_LOOKS on the section's header, with its own sound. Your own
   // colour and icon for the section win.
+  // 6-linked uniques (Guy 2026-11-28: "a unique look to not bait into
+  // tink"): one look below Tink whatever the price, white on the unique
+  // brown with a white beam and star. Your own colour for the section wins.
+  if (cat === SIXLINK_CAT && step < 5) {
+    const t = c.cats[cat]?.text
+    Object.assign(out, {
+      fontSize: own.fontSize ?? 45,
+      text: col(t ?? SIXLINK_LOOK.text),
+      border: col(t ?? SIXLINK_LOOK.edge),
+      background: col(SIXLINK_LOOK.bg)
+    })
+    out.icon = { size: 0, color, shape }
+    out.effect = { color, temp: false }
+  }
   if (cat === 'uniqchase' && step < 5) {
     const l = chaseLookOf(c.chaseLook)
     const t = c.cats[cat]?.text
@@ -1219,8 +1238,8 @@ export function applyCurrency (doc: FilterDoc, cfg: CurrencySettings, lookup: Pr
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === '6l' && b.tier === 'others') ?? doc.blocks.find(b => b.type === '6l')), link6)
   insertBlocks(doc, anchor(doc.blocks.find(b => b.type === 'socketslinks')), recipes.filter(b => !link6.includes(b)))
   const foul = applyFoulborn(doc, eff, all.filter(it => it.cat === 'uniqfoul'), faint) ?? none
-  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec'), faint) ?? none
-  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec'), faint) ?? none
+  const spec = applySpecialRolls(doc, eff, all.filter(it => it.cat === 'uniqspec' || it.cat === SIXLINK_CAT), faint) ?? none
+  const uniq = applyUniques(doc, eff, all.filter(it => it.cls === UNIQUE_CLS && it.cat !== 'uniqfoul' && it.cat !== 'uniqspec' && it.cat !== SIXLINK_CAT), faint) ?? none
   const maps = applySpecialMaps(doc, eff, all.filter(it => it.type === 'maps'), faint) ?? none
   const jewels = applyJewels(doc, eff, all.filter(it => it.type === 'jewels'), faint) ?? none
   const league = applyLeague(doc, eff, all.filter(it => it.type === 'league'), faint) ?? none

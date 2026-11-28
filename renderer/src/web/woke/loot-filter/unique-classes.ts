@@ -19,8 +19,13 @@ export const UNIQUE_CATEGORIES: LootCategory[] = [
   // own section, apart from boss-only): priced by those world drops.
   { id: 'uniqbossmix', name: 'Boss drops, also world drops', art: 'Agate Amulet' },
   { id: 'uniqfoul', name: 'Foulborn', art: 'Paua Amulet' },
-  { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' }
+  { id: 'uniqspec', name: 'Special rolls', art: 'Simple Robe' },
+  // 6-linked uniques, Tabula too (Guy 2026-11-28): their own look, not Tink.
+  { id: 'uniq6l', name: '6-links', art: 'Vaal Regalia' }
 ]
+export const SIXLINK_CAT = 'uniq6l'
+// White on the unique brown, white edge (the look NeverSink gave 6-links).
+export const SIXLINK_LOOK = { text: [255, 255, 255] as [number, number, number], edge: [255, 255, 255] as [number, number, number], bg: [175, 96, 37] as [number, number, number] }
 export const UNIQUE_IDS = new Set(UNIQUE_CATEGORIES.map(x => x.id))
 
 // The unique brown, a shade per fold.
@@ -35,7 +40,8 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
   uniqboss: { text: [190, 80, 40], color: 'Orange', shape: 'Star' },
   uniqbossmix: { text: [200, 125, 70], color: 'Orange', shape: 'Star' },
   uniqfoul: { text: [190, 110, 200], color: 'Purple', shape: 'Star' },
-  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Star' }
+  uniqspec: { text: [230, 160, 80], color: 'Brown', shape: 'Star' },
+  uniq6l: { text: [255, 255, 255], color: 'White', shape: 'Star' }
 }
 
 // Boss-only bases show whatever they are (Guy: "boss-only likely always on"),

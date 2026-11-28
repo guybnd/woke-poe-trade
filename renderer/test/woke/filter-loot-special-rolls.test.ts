@@ -25,13 +25,13 @@ const unique = (baseType: string, more: Partial<ItemFacts> = {}): ItemFacts => (
 
 describe('special unique rolls on the Loot tab', () => {
   it('prices each special rule per base, a 6-link at least 20 Fusings', () => {
-    const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec').map(i => [i.name, i]))
-    expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe' })
+    const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec' || i.cat === 'uniq6l').map(i => [i.name, i]))
+    expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe', cat: 'uniq6l', floor: 4 })
     // Any other 6-linked unique: one row (Guy's R1).
     expect(items.get('Vaal Regalia, 6-link')).toBeUndefined()
     // Priced at its 20 Fusings and never below Big, not at the best 6-link
     // there is (Guy: "any unique 6link should not be tink").
-    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 10, floor: 4 })
+    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 10, floor: 4, cat: 'uniq6l' })
     expect(items.get('Any unique, 6-link')?.bts).toContain('Vaal Regalia')
     expect(items.get('Onyx Amulet, Shaper and Elder')?.chaos).toBe(5000)
     expect(items.get('Glorious Plate, no sockets')?.chaos).toBe(0.1)
@@ -59,8 +59,15 @@ describe('special unique rolls on the Loot tab', () => {
     const doc = parseFilter(REGULAR)
     applyCurrency(doc, cfg, lookup)
     const hit = (base: string, more: Partial<ItemFacts> = {}) => matchItem(doc, unique(base, more)).final?.block
-    // A random 6-linked unique shows Big, not Tink.
-    expect(hit('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)).toMatchObject({ type: CURRENCY_TYPE, tier: 's4' })
+    // A random 6-linked unique shows Big in the 6-links look, not Tink.
+    const six = hit('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)
+    expect(six).toMatchObject({ type: CURRENCY_TYPE, tier: 's4' })
+    const act = (k: string) => six?.actions.find(a => a.key === k)?.args.join(' ')
+    expect(act('SetBackgroundColor')).toBe('175 96 37 255')
+    expect(act('SetTextColor')).toBe('255 255 255 255')
+    expect(act('PlayEffect')).toBe('White')
+    // Tabula too, whatever its 6-link market says.
+    expect(hit('Simple Robe', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)?.actions.find(a => a.key === 'SetBackgroundColor')?.args.join(' ')).toBe('175 96 37 255')
     // Kaom's Heart at 0.1c: under the line, hidden.
     const kaom = hit('Glorious Plate', { socketGroups: [] } as Partial<ItemFacts>)
     expect(kaom).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Hide' })
