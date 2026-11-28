@@ -59,6 +59,7 @@ import type { CatOf, SharePart } from './share-parts'
 import { CURRENCY_TYPE, currencyItems } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
 import { gemLinesOf } from './gem-classes'
+import { loadOwnTables, ownTables } from './own-lists'
 import { nextEditId } from './edits'
 import type { FilterEdit } from './edits'
 import type { OwnRule } from './rules'
@@ -96,7 +97,8 @@ const cats = computed(() => {
   const out = new Map<string, string>()
   if (!doc) return out
   loadCardFacts()
-  const items = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gemLinesOf(props.store.prices.items.value))
+  loadOwnTables()
+  const items = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, gemLinesOf(props.store.prices.items.value), ownTables.value)
   for (const it of items) if (!out.has(it.name)) out.set(it.name, it.cat)
   return out
 })
