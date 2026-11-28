@@ -61,7 +61,7 @@ const LOOT_CLASSES = [
   { id: 'maps', name: 'Maps', art: 'Map', ns: 'ITEM', fa: 'fas fa-map' },
   { id: 'jewels', name: 'Jewels', art: 'Large Cluster Jewel', ns: 'ITEM', fa: 'fas fa-circle' },
   { id: 'league', name: 'League items', art: 'Expedition Logbook', ns: 'ITEM', fa: 'fas fa-book' },
-  { id: 'flasks', name: 'Flasks and tinctures', art: 'Divine Life Flask', ns: 'ITEM', fa: 'fas fa-flask' },
+  { id: 'flasks', name: 'Life and mana flasks', art: 'Divine Life Flask', ns: 'ITEM', fa: 'fas fa-flask' },
   { id: 'recipes', name: 'Recipes', art: 'Chromatic Orb', ns: 'ITEM', fa: 'fas fa-flask' },
   { id: 'levelling', name: 'Levelling', art: 'Scroll of Wisdom', ns: 'ITEM', fa: 'fas fa-seedling' }
 ] as const satisfies ReadonlyArray<{ id: string, name: string, art: string, ns: Ns, fa: string }>
