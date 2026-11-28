@@ -76,7 +76,7 @@ describe('jewels on the Loot tab', () => {
     expect(matchItem(off, jewel('Crimson Jewel', 'Jewels', 'Magic', 84)).visibility).toBe('Hide')
   })
 
-  it('a fixed row goes by price once you say so', () => {
+  it('the section on By price puts its rows on the price ladder', () => {
     const cfg = defaultCurrency()
     cfg.on = true
     cfg.line = 1
@@ -84,7 +84,7 @@ describe('jewels on the Loot tab', () => {
     let doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     expect(matchItem(doc, rare).visibility).toBe('Show')
-    cfg.items = { 'Rare jewel': { priced: true } }
+    cfg.catMode = { jewplain: 'auto' }
     doc = parseFilter(SEMI)
     applyCurrency(doc, cfg, lookup)
     // Its 0.5c guess is under a 1c line.

@@ -94,11 +94,11 @@
         <span :class="$style.catName">{{ g.cat.name }}</span>
         <span v-if="g.edited" :class="$style.edited">{{ g.edited }} edited</span>
         <span v-if="c.rulers[g.cat.id]" :class="$style.edited">own ruler</span>
-        <span :class="$style.count">{{ g.shown }} of {{ g.all }} show<template v-if="g.always"> · {{ g.always }} always</template></span>
+        <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span data-loot-section-mode>
-          <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)" :shown-as="mixOf(g)"
+          <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)"
             :bias="c.rulers[g.cat.id] ? undefined : c.nudge[g.cat.id] ?? 0" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
         </span>
       </div>
@@ -169,11 +169,10 @@
             <span :class="$style.name"><input v-if="kind === 'uniques' || r.it.fixed != null" type="checkbox" :class="$style.onBox" :checked="c.items[r.it.name]?.step !== 0" :aria-label="`Show ${rowName(r.it)}`"
               :title="r.it.fixed != null ? 'Shows in maps. Untick to hide these jewels' : 'Untick to hide this base in maps (you don\'t care about it)'" :data-loot-unique-on="kind === 'uniques' ? '' : undefined" :data-loot-row-on="r.it.fixed != null ? '' : undefined" @click.stop="toggleOn(r.it.name)" @keydown.stop><button v-if="kind === 'cards'" type="button" :class="[$style.star, { [$style.starOn]: c.items[r.it.name]?.min }]" :aria-pressed="!!c.items[r.it.name]?.min"
               :aria-label="`Collecting ${r.it.name}`" title="Collecting: every stack shows at least Normal" data-loot-collect @click.stop="toggleCollect(r.it.name)" @keydown.stop><i class="fas fa-star" aria-hidden="true" /></button>{{ rowName(r.it) }}<span v-if="gemCorrupted(r.it)" :class="$style.corr" title="Corrupted: this price is for a corrupted gem of this level and quality"><WIcon currency="Vaal Orb" size="sm" />Corrupted</span><span v-if="r.it.top" :class="$style.uniqTop" :title="r.it.of && r.it.of > 1 ? `The most valuable of ${r.it.of} uniques that drop on it` : 'The unique that drops on it'"> · {{ r.it.top }}<template v-if="r.it.of && r.it.of > 1"> +{{ r.it.of - 1 }}</template></span><span v-if="r.it.avg && r.it.of && r.it.of > 1" :class="$style.uniqTop" :title="`Priced by an average drop: each of the ${r.it.of} uniques that drop on it, counted by how often it turns up`"> · average of {{ r.it.of }}</span><span v-if="r.it.uniques?.some(u => u.out)" :class="$style.uniqTop" title="You left these out of the average"> · left out: {{ r.it.uniques.filter(u => u.out).map(u => u.name).join(', ') }}</span><span v-if="r.it.chase" :class="$style.uniqTop" :title="`The rarest kind of unique (T0): it doesn't count in the average; the base shows in Chase uniques with its own look`"> · chase: {{ r.it.chase.map(x => `${x.name} ${chaosText(x.chaos)}`).join(', ') }}</span><span v-if="sizeCutNow(r.it, eff) < 1" :class="$style.uniqTop" :title="`Size cut: a ${r.it.size} item counts ${Math.round(sizeCutNow(r.it, eff) * 100)}% of its price`"> · {{ r.it.size }} · {{ Math.round(sizeCutNow(r.it, eff) * 100) }}%</span><span v-if="r.bias" :class="$style.edited"> · bias {{ r.bias }}</span><span v-else-if="r.edited" :class="$style.edited"> edited</span></span>
-            <span :class="$style.price" :title="fixedOf(r.it, c.items[r.it.name]) != null ? 'No price: a filter can\'t see which implicit or mods it has, so it shows at a set step. Set a step or price to change it' : r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
-              <template v-if="r.it.type === 'gold'">by size</template><template v-else-if="fixedOf(r.it, c.items[r.it.name]) != null"><WPrice :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /></template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
+            <span :class="$style.price" :title="fixedOf(r.it, c.items[r.it.name], sectionMode(c, r.it.cat)) != null ? 'No price: a filter can\'t see which implicit or mods it has, so it shows at a set step. Set a step or price to change it' : r.it.type === 'gold' ? 'No price: the Gold ruler steps each pile by its size' : r.it.own ? 'Your price' : r.it.free ? 'No price on poe.ninja: always shows at least Small' : r.it.est ? `No usable price: a guess from NeverSink's ${r.it.tier ? `tier ${r.it.tier}` : 'tiers'}` : 'poe.ninja'">
+              <template v-if="r.it.type === 'gold'">by size</template><template v-else-if="fixedOf(r.it, c.items[r.it.name], sectionMode(c, r.it.cat)) != null"><WPrice :chaos="null" none="No price: a filter can't see which implicit or mods a jewel has, so it shows at a set step" /></template><template v-else>{{ chaosText(r.it.chaos) }}<span v-if="r.it.est" :class="$style.est"> est.</span></template>
             </span>
             <span :class="$style.pills">
-              <button v-if="r.it.fixed != null" type="button" :class="[$style.rowMode, $style['mode_' + rowMode(r.it)]]" :title="ROW_MODE_TIP[rowMode(r.it)]" data-loot-row-mode @click.stop="cycleRowMode(r.it)" @keydown.stop>{{ ROW_MODE_TEXT[rowMode(r.it)] }}</button>
               <span v-for="p in r.pills" :key="p.text" :class="$style.pill" :style="{ background: STEP_CSS[p.step], color: p.step >= 3 ? '#140f08' : '#efe4cc' }">{{ p.text }}</span>
             </span>
             <i class="fas fa-pen w-faint" :class="$style.pen" aria-hidden="true" />
@@ -325,7 +324,7 @@ function pillsOf (stacks: Array<number | null>, edit: ItemEdit | undefined, it: 
   const under = forcedHidden(it, c.value) || !faintActive.value ? 'Hidden' : 'Faint'
   if (stacks.every(k => k == null)) return [{ step: 0, text: edit?.step === 0 ? 'Hidden, set by you' : sectionMode(c.value, it.cat) === 'off' && under === 'Hidden' ? 'Hidden, section off' : `${under} at any stack` }]
   if (edit?.step != null) return [{ step: edit.step, text: `${CSTEP_NAMES[edit.step]} at any stack, set by you` }]
-  const fx = fixedOf(it, edit)
+  const fx = fixedOf(it, edit, sectionMode(c.value, it.cat))
   if (fx != null) return [{ step: fx, text: CSTEP_NAMES[fx] }]
   const out: Pill[] = []
   if (stacks[0] != null && stacks[0] > 1) out.push({ step: 0, text: stacks[0] === 2 ? `${under} at 1` : `${under} 1–${stacks[0] - 1}` })
@@ -381,7 +380,7 @@ const groups = computed(() => CATS.value.map(cat => {
         return { id: name, name, all: inSub, shown: inSub.filter(r => r.shows).length, step: wholeStep(inSub), rows: rowsHere.filter(r => subgroupOf(r.it.name, cat.id) === name) }
       }).filter(sg => sg.rows.length)
     : [{ id: '', name: '', all, shown: 0, step: 'auto', rows: rowsHere }]
-  return { cat, all: all.length, shown: all.filter(r => r.shows).length, edited: all.filter(r => r.edited).length, always: all.filter(r => r.it.fixed != null && rowMode(r.it) === 'always').length, rows: rowsHere, subs }
+  return { cat, all: all.length, shown: all.filter(r => r.shows).length, edited: all.filter(r => r.edited).length, rows: rowsHere, subs }
 }).filter(g => g.rows.length))
 
 type Row = (typeof rows.value)[number]
@@ -558,31 +557,6 @@ function toggleOn (name: string) {
   const { step, ...rest } = c.value.items[name] ?? {}
   setEdit(name, step === 0 ? (Object.keys(rest).length ? rest : null) : { ...rest, step: 0 })
 }
-// A row with a set look and no price (jewels): Always shows it at that look,
-// By price puts it on the price ladder, Off hides it. A click moves along.
-type RowMode = 'always' | 'price' | 'off'
-// A section of such rows on By price whose rows say otherwise: its chip reads
-// Always (every row Always) or Mixed, so the header matches the rows.
-function mixOf (g: { cat: { id: string }, all: number, always: number }): string | undefined {
-  if (!g.always || sectionMode(c.value, g.cat.id) !== 'auto') return undefined
-  return g.always === g.all ? 'Always' : 'Mixed'
-}
-const ROW_MODE_TEXT: Record<RowMode, string> = { always: 'Always', price: 'By price', off: 'Off' }
-const ROW_MODE_TIP: Record<RowMode, string> = {
-  always: 'Always shows, at the look beside it. Click for By price',
-  price: 'Shows by its guessed price and the ruler. Click for Off',
-  off: 'Hidden. Click for Always'
-}
-function rowMode (it: CurrencyItem): RowMode {
-  const e = c.value.items[it.name]
-  return e?.step === 0 ? 'off' : fixedOf(it, e) != null ? 'always' : 'price'
-}
-function cycleRowMode (it: CurrencyItem) {
-  const rest: ItemEdit = Object.fromEntries(Object.entries(c.value.items[it.name] ?? {}).filter(([k]) => !['step', 'priced', 'price', 'supply'].includes(k)))
-  const mode = rowMode(it)
-  const next: ItemEdit = mode === 'always' ? { ...rest, priced: true } : mode === 'price' ? { ...rest, step: 0 } : rest
-  setEdit(it.name, Object.keys(next).length ? next : null)
-}
 function setEdit (name: string, e: ItemEdit | null) {
   const next = Object.fromEntries(Object.entries(c.value.items).filter(([k]) => k !== name))
   if (e) next[name] = e
@@ -704,10 +678,6 @@ function chaosText (v: number): string {
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c9b98c; }
 .price { text-align: right; font-variant-numeric: tabular-nums; }
 .est { color: var(--w-faint); font-size: var(--w-fs-xs); }
-.rowMode { font-size: calc(11px * var(--w-text-scale, 1)); line-height: calc(16px * var(--w-text-scale, 1)); padding: 0 6px; border-radius: 3px; border: 1px solid #5a4a30; background: transparent; color: #c8a565; cursor: pointer; white-space: nowrap; }
-.rowMode:hover { border-color: #c8a565; }
-.mode_price { color: #a89f8c; }
-.mode_off { color: #7a7266; border-style: dashed; }
 .pills { display: flex; gap: 3px; flex-wrap: wrap; min-width: 0; }
 .pill { font-size: var(--w-fs-xs); padding: 0 5px; border-radius: 2px; line-height: 1.5; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .edited { color: var(--w-accent, #c8a565); font-size: var(--w-fs-xs); }

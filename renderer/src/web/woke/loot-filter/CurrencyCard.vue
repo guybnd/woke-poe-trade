@@ -211,7 +211,7 @@ function setSecMode (v: string) {
   cfg.value.catMode = next
 }
 // A jewel row's fixed step (no price) reads as Always, or Off for step 0.
-const fixed = computed(() => it.value ? fixedOf(it.value, edit.value) : undefined)
+const fixed = computed(() => it.value ? fixedOf(it.value, edit.value, secMode.value as SectionMode) : undefined)
 const mode = computed(() => edit.value.step === 0 || fixed.value === 0 ? 'off' : (edit.value.supply === 1 && edit.value.step == null) || fixed.value != null ? 'always' : 'auto')
 const stacks = computed(() => it.value ? stacksFor(it.value, eff.value) : [null, null, null, null, null])
 const off = computed(() => it.value ? offSteps(it.value, cfg.value) : [])
