@@ -358,8 +358,8 @@ type SortKey = 'rated' | BonusKey
 const SORT_KEYS: BonusKey[] = ['d', 'r', 'p', 'currency', 'maps', 'threads']
 const MORE_KEYS: BonusKey[] = ['currency', 'maps', 'threads', 'divCards', 'scarabs']
 const SORT_OPTIONS = [{ value: 'rated', label: 'Rated first' }, ...SORT_KEYS.map(k => ({ value: k, label: BONUS_LABEL[k] }))]
-const WANT_ALL_TIP = 'Rates as want every unrated mod in the list that gives this bonus. Mods you rated stay as they are. ' +
-  'A T17 mod and a regular one can share a line, and the stash search can\'t tell them apart.'
+const WANT_ALL_TIP = 'Rates every unrated mod with this bonus as want; your own ratings stay. ' +
+  'The stash search can\'t tell a T17 mod from a regular one on the same line.'
 const sortBy = shallowRef<SortKey>('rated')
 loadMapBonuses().catch(() => {})
 const withT17 = computed(() => !profile.value.hideT17)

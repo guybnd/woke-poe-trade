@@ -1,5 +1,6 @@
 # Next release notes
 
+- Shorter hover texts: the price check's Low, Approx, High and By value buttons each say what they do in one line instead of one wall of text, and the Per hour picker, Supply, Falling, Faustus, deck worth and a few other hovers are cut down.
 - Loot filter (beta): each class has its own minimap icon shape, so the shape alone tells you what dropped: currency circle, fragments kite, cards diamond, uniques star, gems triangle, maps square, jewels raindrop, league items pentagon, gold moon, rare gear hexagon. The Never hide value net uses a house. Colours still tell the sections apart. A shape you picked yourself for a section stays.
 - Loot filter (beta): Gold has its own page on the Loot tab, right under Currency, with its pile size ruler at the top. Each class on the Loot tab's list shows its item art instead of a coloured square.
 - Loot filter (beta), Loot tab: a section can have its own ruler. Open a section and click Own ruler: it starts where that section's steps are now, and you drag its Small, Normal, Decent, Big and Tink on their own. The top ruler is now labelled Main ruler (every Loot page) and says which sections have their own. Strictness still moves an own ruler; its Price bias is left out while it has one. Undo goes back to the main ruler.
