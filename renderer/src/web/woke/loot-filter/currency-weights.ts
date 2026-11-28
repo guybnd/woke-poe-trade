@@ -616,7 +616,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     }
   }
   // A row of conditions with a guess or a fixed step (jewels, special gear).
-  const setRow = (r: { name: string, cls: string, cat: string, guess: number, fixed?: CStep, bts: string[], conds: FilterCondition[] }, type: string, bt: string) => {
+  const setRow = (r: { name: string, cls: string, cat: string, guess: number, fixed?: CStep, free?: boolean, bts: string[], conds: FilterCondition[] }, type: string, bt: string) => {
     const own = edits[r.name]?.price
     seen.set(r.name, {
       name: r.name,
@@ -629,6 +629,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       ...(own != null ? { own: true } : {}),
       full: 1,
       ...(r.fixed != null ? { fixed: r.fixed } : {}),
+      ...(r.free && own == null ? { free: true } : {}),
       bt,
       bts: [...r.bts],
       conds: r.conds.map(x => ({ ...x, values: [...x.values] }))
@@ -672,6 +673,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
       chaos: (own ?? r.guess) * (edits[r.name]?.mult ?? 1),
       est: own == null,
       ...(own != null ? { own: true } : {}),
+      ...(r.free && own == null ? { free: true } : {}),
       full: 1,
       bt: r.tip,
       bts: r.bts,

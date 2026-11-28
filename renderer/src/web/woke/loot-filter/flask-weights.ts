@@ -10,7 +10,7 @@ import type { Step } from './weights'
 import { WEIGHT_TYPE } from './weight-settings'
 import type { RankKey, WeightSettings } from './weight-settings'
 
-export const FLASK_BASES = ['Amethyst Flask', 'Basalt Flask', 'Bismuth Flask', 'Diamond Flask', 'Gold Flask', 'Granite Flask', 'Iron Flask', 'Jade Flask', 'Quartz Flask', 'Quicksilver Flask', 'Ruby Flask', 'Sapphire Flask', 'Silver Flask', 'Stibnite Flask', 'Sulphur Flask', 'Topaz Flask'] as const
+export const FLASK_BASES = ['Amethyst Flask', 'Aquamarine Flask', 'Basalt Flask', 'Bismuth Flask', 'Corundum Flask', 'Diamond Flask', 'Gold Flask', 'Granite Flask', 'Iron Flask', 'Jade Flask', 'Quartz Flask', 'Quicksilver Flask', 'Ruby Flask', 'Sapphire Flask', 'Silver Flask', 'Stibnite Flask', 'Sulphur Flask', 'Topaz Flask'] as const
 // Every tincture base (base-facts.ts; flask-weights.test checks the list).
 export const TINCTURE_BASES = ['Ashbark Tincture', 'Blood Sap Tincture', 'Borealwood Tincture', 'Fulgurite Tincture', 'Ironwood Tincture', 'Oakbranch Tincture', 'Poisonberry Tincture', 'Prismatic Tincture', 'Rosethorn Tincture', 'Sporebloom Tincture'] as const
 // The two sets, each a page on Equipment: its rules' class and name.
@@ -39,6 +39,9 @@ const DEFAULT_RANK: Record<string, RankKey> = {
   'Ruby Flask': 'r2',
   'Sapphire Flask': 'r2',
   'Topaz Flask': 'r2',
+  // Freeze and stun immunity flasks (Guy's walk: an Aquamarine Flask no rule caught).
+  'Aquamarine Flask': 'r2',
+  'Corundum Flask': 'r2',
   'Bismuth Flask': 'r3',
   'Stibnite Flask': 'r3'
 }
