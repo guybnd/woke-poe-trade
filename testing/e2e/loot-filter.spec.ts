@@ -1867,6 +1867,15 @@ test('our own filter: no file needed, strictness on the Loot tab, saved as our f
   await expect(page.getByRole('tab')).toHaveText([/^Loot/, /^Gear/, /^Style/, /^Preview/, /^History/])
   await expect(page.locator('[data-loot-class="own"]')).toBeVisible()
   await overlay.snap('our own filter window')
+  // All loot opens as its full ruler and folds when its name is pressed; the
+  // page's ground sits beside its own ruler (Guy's V1).
+  await expect(page.locator('[data-loot-all-open]')).toHaveAttribute('aria-expanded', 'true')
+  const ruler = await page.locator('[data-currency-page-ruler]').boundingBox()
+  const ground = await page.locator('[data-loot-page-preview]').boundingBox()
+  expect(ground!.x).toBeGreaterThan(ruler!.x + ruler!.width - 1)
+  await page.locator('[data-loot-all-open]').click()
+  await expect(page.locator('[data-loot-all-prices]')).toBeVisible()
+  await page.locator('[data-loot-all-open]').click()
   await page.getByRole('tab', { name: /^Style/ }).click()
   await expect(page.locator('[data-loot-look]')).toBeVisible()
   await overlay.snap('style tab')
