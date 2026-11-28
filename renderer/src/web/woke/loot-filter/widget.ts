@@ -205,6 +205,8 @@ export function initLootFilterWidget (w: LootFilterWidget) {
 export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootFilterWidget {
   const w = { wmId, wmType: LOOT_FILTER_TYPE, wmTitle: '', wmWants: 'hide', wmZorder: null, wmFlags: [] } as unknown as LootFilterWidget
   initLootFilterWidget(w)
+  // A new filter starts with the Loot tab on.
+  w.presets.currency.on = true
   // Order doesn't matter: 'Shift + Alt + F' is 'Alt + Shift + F'.
   const used = new Set(taken.map(sortKeys))
   const free = (key: string | null) => key && !used.has(sortKeys(key)) ? key : null
@@ -214,6 +216,20 @@ export function seedLootFilterWidget (wmId: number, taken: string[] = []): LootF
   w.stricterHotkey = free(w.stricterHotkey)
   w.looserHotkey = free(w.looserHotkey)
   return w
+}
+
+// Once per config (Config.ts, woke.lootOnByDefault): the Loot tab goes on for
+// the profile in use and every stored one, as NeverSink's tab is retired.
+export function lootOnForAll (w: { presets?: unknown, profiles?: Array<{ data?: { presets?: unknown } }> }) {
+  const on = (holder: { presets?: unknown }) => {
+    const p = (holder.presets && typeof holder.presets === 'object' ? holder.presets : {}) as { currency?: unknown }
+    const c = (p.currency && typeof p.currency === 'object' ? p.currency : {}) as { on?: boolean }
+    c.on = true
+    p.currency = c
+    holder.presets = p
+  }
+  on(w)
+  for (const p of Array.isArray(w.profiles) ? w.profiles : []) if (p?.data && typeof p.data === 'object') on(p.data)
 }
 
 export function normalizeLootFilterWidget (w: LootFilterWidget) {

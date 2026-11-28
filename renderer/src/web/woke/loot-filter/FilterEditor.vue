@@ -286,7 +286,6 @@
     <EquipmentTab v-else-if="tab === 'weights'" :store="store" :config="config" :focus="tabFocus" @open-rule="openRule" />
     <LootTab v-else-if="tab === 'currency'" :store="store" :config="config" :focus="tabFocus" @open-rule="r => jumpTo(r.type, r.tier)" />
     <PricesTab v-else-if="tab === 'prices'" :store="store" :config="config" :anchor="panel?.el" @open-rule="r => jumpTo(r.type, r.tier, r.base)" @open-loot="tab = 'currency'" />
-    <NeverSinkTab v-else-if="tab === 'neversink'" :store="store" :config="config" :anchor="panel?.el" />
 
     <!-- build rules -->
     <div v-else-if="tab === 'build'" :class="$style.changes" class="w-scroll">
@@ -428,7 +427,6 @@ import { RULE_TYPE, nameCheck, newRule, ruleProblem, ruleSummary } from './rules
 import type { OwnRule } from './rules'
 import { decodeChanges, describeShared, encodeChanges } from './share'
 import type { SharedChanges } from './share'
-import NeverSinkTab from './NeverSinkTab.vue'
 import { LEVEL_NAMES } from './strictness'
 import HistoryList from './HistoryList.vue'
 import { exampleItem } from './example-item'
@@ -475,7 +473,7 @@ const props = defineProps<{
   // Group/tier to show first (from the sample card).
   focus?: { type: string, tier: string } | null
   // A tab to show (from the dock card). A new object each time.
-  openTab?: { tab: 'prices' | 'neversink' | 'changes' | 'gear' } | null
+  openTab?: { tab: 'prices' | 'currency' | 'changes' | 'gear' } | null
 }>()
 
 const emit = defineEmits<{ (e: 'close' | 'tab-opened'): void, (e: 'paste-item', text: string): void }>()
@@ -493,7 +491,7 @@ const tabFocus = ref<string | null>(null)
 // is a lazy chunk that mounts after the next tick, so a focus cleared then
 // never reached it (Guy 2026-11-28: Go to rule opened Currency, not Gems).
 let focusTab: string | null = null
-const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
+const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'build' | 'changes'>('rules')
 // Equipment shows (beta): Base ranks is its section, else a top tab.
 const equipShown = computed(() => experimentalUnlocked.value || props.config.presets.weights.on)
 function openRanks () {
@@ -565,12 +563,11 @@ const tabOptions = computed(() => [
   ...(equipShown.value ? [] : [{ value: 'ranks', label: 'Base ranks', count: Object.keys(props.config.presets.gear.moves).length || undefined, title: 'Which gear bases sit in which rank' }]),
   // Beta: shown with the experimental tools, or while this profile uses it.
   ...(equipShown.value ? [{ value: 'weights', label: 'Equipment', count: props.config.presets.weights.on ? '✓' : undefined, title: 'Beta: decide endgame rares and flasks by a score you tune' }] : []),
-  ...(experimentalUnlocked.value || props.config.presets.currency.on ? [{ value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Beta: show endgame loot by what it is worth, class by class' }] : []),
+  { value: 'currency', label: 'Loot', count: props.config.presets.currency.on ? '✓' : undefined, title: 'Show endgame loot by what it is worth, class by class' },
   { value: 'preview', label: 'Preview' },
   // The look strip lives on Rules, so it isn't counted here.
   { value: 'presets', label: 'Presets', count: Object.entries(props.config.presets).filter(([k, x]) => k !== 'look' && k !== 'gear' && k !== 'weights' && k !== 'currency' && k !== 'clusterPrices' && x.on).length || undefined },
   { value: 'prices', label: 'Prices', count: props.store.plan.value?.moves.length || undefined },
-  { value: 'neversink', label: props.config.neversink.on ? `NeverSink · ${LEVEL_NAMES[props.config.neversink.level]}` : 'NeverSink', count: props.store.updateReady.value ? 1 : undefined },
   { value: 'build', label: 'Build', count: props.store.buildBlockCount.value || undefined },
   // Price moves are changes to your filter too.
   { value: 'changes', label: 'Changes', count: props.config.edits.length + activePriceMoves.value }
@@ -642,7 +639,7 @@ const banner = computed<{ text: string, tone: 'warn' | 'info', actions: BannerAc
     return {
       tone: 'info',
       text: `NeverSink ${ready.version} is ready. ${ready.ok} of ${ready.total} of your changes fit.`,
-      actions: [{ label: 'What changed', run: () => { tab.value = 'neversink' } }, { label: 'Update', primary: true, run: updateNow }]
+      actions: [{ label: 'Update', primary: true, run: updateNow }]
     }
   }
   if (s.gameFilter.value.loaded === false) {
@@ -1559,7 +1556,7 @@ async function pickSource (key: string) {
   if (!key || key === sourceKey.value) return
   if (key === 'github') {
     await props.store.useGitHub(true)
-    tab.value = 'neversink'
+    tab.value = 'currency'
     return
   }
   if (props.config.neversink.on) props.config.neversink.on = false
