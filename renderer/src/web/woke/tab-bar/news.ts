@@ -59,7 +59,6 @@ export const NEWS: NewsItem[] = [
   { id: 'price-check-base-percentile', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: rare and magic armour show their base roll ("92% base") by its defence; click it to add it to the search' },
   { id: 'related-folded-groups', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Related', note: 'New: the list beside a price check folds into groups that fit your screen; click a group to open it' },
   { id: 'price-check-conquest-keystones', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Prices & search', note: 'New: a Timeless jewel lists each conqueror\'s keystone beside it. Click one to search it, any number' },
-  { id: 'essence-tip-slots', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: an essence\'s tooltip lists the mod it forces on each slot' },
   { id: 'price-check-mod-tiers', since: '1.330.21', wmType: 'price-check', name: 'Price check', topic: 'Tooltips', note: 'New: hover a mod for its tiers, the item level each needs, and the bench craft for it' },
   { id: 'search-recent-save', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: hover a Recent line to save it on top (bookmark) or remove it (×, or Delete)' },
   { id: 'search-type-to-open', since: '1.330.21', wmType: 'woke-search', name: 'Search', note: 'New: with the overlay open, just start typing to search' },
@@ -85,7 +84,8 @@ export const NEWS: NewsItem[] = [
   { id: 'div-card-map-chance', since: '1.330.19', wmType: 'woke-search', name: 'Search', note: 'New: type a map to see how likely each of its cards is, and what one is worth on average' },
   { id: 'listed-still-cheapest', since: '1.330.19', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: Check on a Listed row says if anyone sells it cheaper (one trade search)' },
   { id: 'net-worth-listed', since: '1.330.18', wmType: 'woke-net-worth', name: 'Net worth', goto: 'listed', note: 'New: a Listed tab: what you have up at Faustus, unsold, and for how long' },
-  { id: 'map-mods-t17-planner', since: '1.330.18', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' }
+  { id: 'map-mods-t17-planner', since: '1.330.18', wmType: 'woke-map-mods', name: 'Map mods', goto: 'planner', note: 'New: a Planner tab for T17 maps, and what each mod adds to a map' },
+  { id: 'atlas-planner-links', since: '1.330.18', wmType: 'woke-atlas-strategies', goto: 'strategies', name: 'Atlas strategies', note: 'New: imports poeatlasplanner.com links' }
 ]
 
 // A line shows for the release it ships in and the next one, then expires.
