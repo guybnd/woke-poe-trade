@@ -1520,6 +1520,18 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(six.getByRole('button', { name: 'Normal', pressed: true })).toBeVisible()
   await overlay.snap('loot tab, recipes')
   await six.getByRole('button', { name: 'Off' }).click()
+  // Levelling: where the Loot looks apply (everywhere by default) and the
+  // currency that shows while levelling, each with its item tooltip.
+  await page.locator('[data-loot-class="levelling"]').click()
+  const gate = page.locator('[data-levelling-gate]')
+  await expect(gate.getByRole('button', { name: 'Everywhere', pressed: true })).toBeVisible()
+  const wisdom = page.locator('[data-levelling-item="Scroll of Wisdom"]')
+  await expect(wisdom).toContainText('Normal')
+  await expect(wisdom.getByRole('checkbox')).toBeChecked()
+  await gate.getByRole('button', { name: 'Maps only' }).click()
+  await expect(page.locator('[data-levelling-on]')).toBeDisabled()
+  await overlay.snap('loot tab, levelling')
+  await gate.getByRole('button', { name: 'Everywhere' }).click()
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()

@@ -230,7 +230,7 @@ describe('currency weights', () => {
     }
   })
 
-  it('gives every pile the step its worth says, in maps only', () => {
+  it('gives every pile the step its worth says', () => {
     for (const line of [0.1, 0.5, 1, 3, 5]) {
       const cfg = on(c => { c.line = line })
       const doc = parseFilter(SEMI)
@@ -248,8 +248,14 @@ describe('currency weights', () => {
           expect(res.visibility === 'Hide', `${it.name} ×${n}`).toBe(want === 0)
         }
       }
-      // Levelling is NeverSink's.
-      expect(matchItem(doc, pile('Orb of Transmutation', 1, 40)).final?.block.type).not.toBe(CURRENCY_TYPE)
+      // Levelling: the Loot rules apply there too, a leveller's supplies at
+      // least Normal (levelling.ts).
+      expect(matchItem(doc, pile('Orb of Transmutation', 1, 40)).final?.block).toMatchObject({ type: CURRENCY_TYPE, visibility: 'Show' })
+      expect(Number(matchItem(doc, pile('Orb of Transmutation', 1, 40)).final?.block.tier?.slice(1))).toBeGreaterThanOrEqual(2)
+      // Maps only: levelling is NeverSink's.
+      const mapsOnly = parseFilter(SEMI)
+      applyCurrency(mapsOnly, on(c => { c.line = line; c.catMode = { lvgate: 0 as unknown as 'auto' } }), lookup)
+      expect(matchItem(mapsOnly, pile('Orb of Transmutation', 1, 40)).final?.block.type).not.toBe(CURRENCY_TYPE)
       // Other items too.
       expect(matchItem(doc, { ...pile('Splinter of Xoph', 1), itemClass: 'Stackable Currency' }).final?.block.type).not.toBe(CURRENCY_TYPE)
     }
