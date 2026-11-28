@@ -1,6 +1,6 @@
 <template>
-  <!-- Your build, the same section on the Build tab and on Loot › Levelling
-       (Guy's pick X, 2026-11-28: mirrored in both): the gear template for
+  <!-- Your build, on Loot › Levelling
+       (Guy's pick X, 2026-11-28): the gear template for
        levelling (build type, weapon types, armour) and the PoB build rules. -->
   <div :class="$style.wrap" data-build-section>
     <div :class="$style.row" data-levelling-build>
@@ -26,7 +26,7 @@
         <span>Rules for <span class="w-accent">{{ input.buildName }}</span></span>
         <WInfo text="Rules for your active build's gems, link colours and uniques.
 - They go at the top of your saved copy, ahead of NeverSink's.
-- Restyle them under **Rules › Your build**." />
+- They show louder than the levelling looks above." />
       </div>
       <div v-for="r in buildRows" :key="r.key" :class="$style.ruleRow">
         <WChip clickable :active="config.buildRules[r.key]" :title="config.buildRules[r.key] ? 'Turn off' : 'Turn on'" @click="config.buildRules[r.key] = !config.buildRules[r.key]">
