@@ -54,7 +54,8 @@ describe('normal map looks', () => {
     const t16 = doc.blocks.find(b => b.tier === 'maps_a_t16')!
     const act = (k: string) => t16.actions.find(a => a.key === k)?.args
     expect(act('SetBackgroundColor')?.slice(0, 3)).toEqual(['255', '255', '255'])
-    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['230', '190', '40'])
+    // Grey, not gold: a coloured edge or card means a special map.
+    expect(act('SetBorderColor')?.slice(0, 3)).toEqual(['150', '150', '150'])
     expect(act('MinimapIcon')).toEqual(['1', 'White', 'Square'])
   })
 })
