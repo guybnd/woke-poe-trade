@@ -23,6 +23,7 @@ import { WEAPON_CLASSES } from './build-rules'
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { parseFilter } from './parse'
 import { MAP_BANDS } from './map-floor'
+import { baseRankTable } from './base-ranks'
 
 export const OWN_REST_TYPE = 'woke->rest'
 
@@ -200,4 +201,27 @@ export function ownGearHideFrom (doc: FilterDoc, lv: FilterCondition[] | null): 
   b.conditions = b.conditions.filter(c => c.key !== 'AreaLevel')
   if (from != null) b.conditions.unshift({ key: 'AreaLevel', op: '>=', count: null, values: [String(from)] })
   b.dirty = true
+  // Exotic bases (talismans, experimented bases: our base ranks' x1 and x2)
+  // show above it, as NeverSink's exotic rules did: a white or blue one is
+  // worth picking up while levelling too (M8 proof). In maps the rare
+  // weights above decide.
+  const t = baseRankTable()
+  const exotic = [...new Set([...t.x1, ...t.x2])]
+  if (!exotic.length || doc.blocks.some(x => x.type === OWN_REST_TYPE && x.tier === 'exoticgear')) return
+  const add = parseFilter([
+    `Show # $type->${OWN_REST_TYPE} $tier->exoticgear`,
+    '\tRarity Normal Magic',
+    `\tBaseType == ${exotic.map(n => `"${n}"`).join(' ')}`,
+    '\tSetFontSize 45',
+    '\tSetTextColor 0 240 190 255',
+    '\tSetBorderColor 0 240 190 255',
+    '\tSetBackgroundColor 20 20 0 255',
+    '\tPlayAlertSound 3 300',
+    '\tMinimapIcon 1 Blue Diamond',
+    ''
+  ].join('\n')).blocks
+  for (const x of add) { x.line = b.line; x.dirty = true }
+  doc.chunks.splice(doc.chunks.indexOf(b), 0, ...add)
+  doc.blocks.splice(doc.blocks.indexOf(b), 0, ...add)
+  doc.blocks.forEach((x, k) => { x.index = k })
 }
