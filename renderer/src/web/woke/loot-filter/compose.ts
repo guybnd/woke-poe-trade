@@ -5,7 +5,7 @@
 import { applyFlasks } from './flask-weights'
 import { parseFilterCopy } from './parse'
 import type { FilterDoc } from './parse'
-import { ownBaseText } from './own-base'
+import { ownBaseText, ownGearHideFrom } from './own-base'
 import { gameNameCheck, nameCheck, ruleBlocks } from './rules'
 import type { OwnRule } from './rules'
 import { applyPresetChanges, colourBlindActions, presetBlocks, scaleVolume } from './presets'
@@ -29,6 +29,7 @@ import { applyWeights, filterBases } from './weights'
 import type { IdGroup } from './id-mods'
 import { applyCurrency, recipeStep, scaled } from './currency-weights'
 import { levellingGearBlocks, questlikeBlocks, retireNeverSinkLevelling } from './levelling-gear'
+import { lvConds } from './levelling'
 import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
@@ -155,6 +156,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
     retireNeverSinkLevelling(next, migrated.currency)
     insertBuildBlocks(next, [...questlikeBlocks(), ...levellingGearBlocks(migrated.currency, cfg.presets.weapons, input ? { weaponClasses: input.weaponClasses, rareBases: input.rareBases } : null)])
   }
+  if (cfg.ownBase) ownGearHideFrom(next, currency ? lvConds(migrated.currency) : null)
   // Build rules go in first, so edits to them (restyles) apply on top.
   let buildCount = 0
   if (input) {

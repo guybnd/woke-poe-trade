@@ -2,13 +2,16 @@
 // woke writes its rules into when NeverSink's isn't used. Every rule woke
 // makes goes on top of it, as it goes on top of NeverSink's file today; this
 // only holds what is left once ours have had their say:
-//   - plain and magic gear in maps hides (the Loot tab, rare weights and
-//     levelling rules above show what's worth it, the safety net the rest)
+//   - plain and magic gear hides in maps, and while levelling where our
+//     levelling rules are on (ownGearHideFrom); the Loot tab, rare weights
+//     and levelling rules above show what's worth it, the safety net the rest
+//   - below maps, older life, mana and hybrid flask sizes with quality
+//     show small (the levelling rules above hide the ones without)
 //   - plain life, mana and hybrid flasks and plain normal and magic jewels in maps
 //     hide too (NeverSink hides them; the Loot tab's rows show the good ones)
 //   - uniques, maps (blighted ones above the map floor) and rare and abyss
-//     jewels no row of ours took still show, in their
-//     usual look: a price we don't have never hides one (M8 proof)
+//     jewels no row of ours took still show, in their usual look: a price we
+//     don't have never hides one (M8 proof)
 //   - anything else shows pink, so an item no rule of ours knows stands out
 //     instead of falling to the game's own plain label.
 // Sections that go above one of NeverSink's rules (uniques, maps, jewels,
@@ -17,7 +20,7 @@
 // Its strictness header is the one NeverSink's file would have, so the
 // Loot tab's ruler scales the same.
 import { WEAPON_CLASSES } from './build-rules'
-import type { FilterBlock, FilterDoc } from './parse'
+import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import { parseFilter } from './parse'
 import { MAP_BANDS } from './map-floor'
 
@@ -101,6 +104,12 @@ export function ownBaseText (strictness: string | null): string {
     `\tClass == ${quoted(GEAR_CLASSES)}`,
     '\tSetFontSize 18',
     '',
+    `Show # $type->${OWN_REST_TYPE} $tier->qualityflasks`,
+    '\tAreaLevel < 68',
+    '\tRarity <= Magic',
+    '\tClass == "Life Flasks" "Mana Flasks" "Hybrid Flasks"',
+    '\tSetFontSize 30',
+    '',
     `Hide # $type->${OWN_REST_TYPE} $tier->plainflasks`,
     '\tAreaLevel >= 68',
     '\tRarity Normal',
@@ -177,4 +186,18 @@ export function ownBaseText (strictness: string | null): string {
     '\tSetBackgroundColor 100 0 100 255',
     ''
   ].join('\n')
+}
+
+// Where plain and magic gear starts hiding: in maps only, unless our
+// levelling rules are on (`lv`, their area conditions), then from where they
+// start. With them off a player levelling still sees white and blue gear
+// (pink) instead of losing movement speed boots and 4-links.
+export function ownGearHideFrom (doc: FilterDoc, lv: FilterCondition[] | null): void {
+  const b = doc.blocks.find(b => b.type === OWN_REST_TYPE && b.tier === 'plaingear')
+  if (!b) return
+  const ge = lv?.find(c => c.key === 'AreaLevel' && c.op === '>=')
+  const from = !lv ? 68 : ge ? Number(ge.values[0]) : null
+  b.conditions = b.conditions.filter(c => c.key !== 'AreaLevel')
+  if (from != null) b.conditions.unshift({ key: 'AreaLevel', op: '>=', count: null, values: [String(from)] })
+  b.dirty = true
 }
