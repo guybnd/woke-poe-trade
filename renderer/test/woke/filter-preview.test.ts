@@ -10,7 +10,7 @@ import { rollDrops, defaultTextColour } from '@/web/woke/loot-filter/drops'
 import type { Drop } from '@/web/woke/loot-filter/drops'
 import { labelBox, layoutLabels, runDrops, soundsOf, summarize } from '@/web/woke/loot-filter/shower'
 import type { Rect } from '@/web/woke/loot-filter/shower'
-import { customSoundsIn, isCustomSound, isPackSound, soundLabel, soundUses } from '@/web/woke/loot-filter/sounds'
+import { canPreview, customSoundsIn, isCustomSound, isGameSound, isPackSound, soundLabel, soundUses } from '@/web/woke/loot-filter/sounds'
 
 const SOURCE = fs.readFileSync(path.join(FIXTURES, 'filters/neversink-sample.filter'), 'utf8')
 
@@ -179,5 +179,14 @@ describe('custom sounds', () => {
     expect(soundLabel('9')).toBe('Game sound 9: Small')
     expect(soundLabel('8')).toBe('Game sound 8')
     expect(soundUses(parseFilter(SOURCE)).get('6')).toEqual(['General currency'])
+  })
+
+  it('the game sounds 1-16 and the Sh ones can be previewed, nothing else', () => {
+    for (const id of ['1', '9', '16', 'ShAlchemy', 'shmirror']) expect(isGameSound(id)).toBe(true)
+    for (const id of ['0', '17', '01', 'None', 'ShNope', 'ping.mp3']) expect(isGameSound(id)).toBe(false)
+    expect(canPreview('ping.mp3')).toBe(true)
+    expect(canPreview('16')).toBe(true)
+    expect(canPreview('None')).toBe(false)
+    expect(soundLabel('ShDivine')).toBe('Game sound ShDivine')
   })
 })

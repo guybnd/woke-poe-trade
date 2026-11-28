@@ -47,14 +47,15 @@
           <optgroup v-if="ownSounds.length" label="Your sounds in the filter folder">
             <option v-for="f in ownSounds" :key="f" :value="f">{{ f }}</option>
           </optgroup>
-          <optgroup label="Game sounds (play only in game)">
+          <optgroup label="Game sounds (from your game install)">
             <option v-for="id in SOUND_IDS" :key="id" :value="id">{{ id }}{{ GAME_SOUND_NAMES[id] ? ` ${GAME_SOUND_NAMES[id]}` : '' }}{{ uses.get(id)?.length ? ` · ${uses.get(id)!.slice(0, 3).join(', ')}` : '' }}</option>
+            <option v-for="id in SH_SOUNDS" :key="id" :value="id">{{ id }}{{ uses.get(id)?.length ? ` · ${uses.get(id)!.slice(0, 3).join(', ')}` : '' }}</option>
           </optgroup>
           <option v-if="look.sound && !known(look.sound.id)" :value="look.sound.id">{{ soundLabel(look.sound.id) }}</option>
         </select>
         <span v-if="look.sound" class="flex items-center gap-2">
-          <button type="button" class="w-icon-btn" :class="{ [$style.cantPlay]: !isCustomSound(look.sound.id) }"
-            :title="isCustomSound(look.sound.id) ? 'Play' : 'The game\'s own sounds play only in game'" :aria-label="`Play ${soundLabel(look.sound.id)}`"
+          <button type="button" class="w-icon-btn" :class="{ [$style.cantPlay]: !canPreview(look.sound.id) }"
+            :title="canPreview(look.sound.id) ? 'Play' : 'This sound can\'t be played here'" :aria-label="`Play ${soundLabel(look.sound.id)}`"
             @click="play(look.sound!.id, look.sound!.volume)"><i class="fas fa-play" /></button>
           <input type="range" min="0" max="300" step="10" :value="look.sound.volume" class="grow" style="min-width: 0;" aria-label="Volume"
             :title="`Volume ${look.sound.volume}`"
@@ -137,7 +138,7 @@ import { DEFAULT_BG, DEFAULT_FONT, DEFAULT_TEXT } from './edits'
 import type { Colour, StylePatch } from './edits'
 import { ICON_SHAPES, ICON_SIZES, POE_COLOURS, SOUND_IDS, poeColour, shapeGlyph } from './colours'
 import { useActiveFilter } from './active-filter'
-import { NEVERSINK_SOUNDS, installPackSounds, isCustomSound, isPackSound, listFolderSounds, GAME_SOUND_NAMES, playSound, soundLabel, soundUses } from './sounds'
+import { NEVERSINK_SOUNDS, SH_SOUNDS, canPreview, gameSoundError, installPackSounds, isGameSound, isPackSound, listFolderSounds, GAME_SOUND_NAMES, playSound, soundLabel, soundUses } from './sounds'
 
 const active = useActiveFilter()
 
@@ -274,20 +275,21 @@ onMounted(async () => {
 })
 
 function known (id: string): boolean {
-  return SOUND_IDS.includes(id) || isPackSound(id) || ownSounds.value.includes(id)
+  return SOUND_IDS.includes(id) || (SH_SOUNDS as readonly string[]).includes(id) || isPackSound(id) || ownSounds.value.includes(id)
 }
 
 async function play (id: string, volume: number) {
-  if (!isCustomSound(id)) {
-    toast('The game\'s own sounds only play in game. Pick one from NeverSink\'s pack above to hear it here.')
+  if (!canPreview(id)) {
+    toast(`${soundLabel(id)} can't be played here`)
     return
   }
-  if (!await playSound(id, volume, dir.value)) toast(`Couldn't play ${soundLabel(id)}`)
+  if (await playSound(id, volume, dir.value)) return
+  toast(isGameSound(id) && gameSoundError ? `Couldn't play ${soundLabel(id)}: ${gameSoundError}` : `Couldn't play ${soundLabel(id)}`)
 }
 
 function setSound (id: string, volume: number) {
   emit('patch', { sound: id ? { id, volume } : null })
-  if (!id || !isCustomSound(id)) return
+  if (!id || !canPreview(id)) return
   play(id, volume)
   // The game plays pack sounds from the filter folder: put it there now.
   if (isPackSound(id)) installPackSounds([id], dir.value).catch(() => toast('Couldn\'t copy the sound into your filter folder'))
