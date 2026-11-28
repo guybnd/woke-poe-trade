@@ -1,7 +1,7 @@
 ---
 id: WOKEPOET-701
 title: 'Levelling 2: Levelling section UI'
-status: Ready
+status: Done
 priority: None
 effort: None
 assignee: unassigned
@@ -37,7 +37,30 @@ history:
     date: '2026-11-28T06:11:31.137Z'
     comment: Updated implementation link.
     id: a-2026-11-28t06-11-31-137z
+  - type: comment
+    user: Agent
+    comment: PR 1069 merged as 0946eea.
+    completionComment: true
+    date: '2026-11-28T07:06:50.493Z'
+    id: c-2026-11-28t07-06-50-493z
+  - type: status_change
+    from: Ready
+    to: Done
+    user: Agent
+    date: '2026-11-28T07:06:51.123Z'
 needsAction: null
 implementationLink: 'https://github.com/guybnd/woke-poe-trade/pull/1069'
+baselineCommit: a717ec34993c84c76511c3a3c34d120fd5288bb7
+swimlane: null
+diffSummary:
+  - file: renderer/src/web/woke/pob-builds/BuildDetail.vue
+    additions: 4
+    deletions: 4
+  - file: renderer/src/web/woke/pob-builds/build-model.ts
+    additions: 14
+    deletions: 0
+  - file: renderer/test/woke/pob-builds.test.ts
+    additions: 39
+    deletions: 1
 ---
 Act bands, rows with until/Edit, lazy-loaded.
