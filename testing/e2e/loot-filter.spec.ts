@@ -1511,15 +1511,18 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('loot tab, league')
   await logs.locator('[data-loot-section-mode]').getByRole('button').click()
   await page.getByRole('menuitemradio', { name: /^By price/ }).click()
-  // Recipes: each vendor recipe Off or the step it shows at in maps.
+  // Recipes: each vendor recipe Off or the step it shows at in maps, by
+  // default the step its reward's price reaches (By price).
   await page.locator('[data-loot-class="recipes"]').click()
-  // (Its start carries over the 6 sockets preset, off here: Off.)
   const six = page.locator('[data-loot-recipe="six"]')
-  await expect(six.getByRole('button', { name: 'Off', pressed: true })).toBeVisible()
+  const byPrice = six.locator('[data-recipe-auto]')
+  await expect(byPrice).toHaveAttribute('aria-pressed', 'true')
   await six.getByRole('button', { name: 'Normal' }).click()
   await expect(six.getByRole('button', { name: 'Normal', pressed: true })).toBeVisible()
+  await expect(byPrice).toHaveAttribute('aria-pressed', 'false')
   await overlay.snap('loot tab, recipes')
-  await six.getByRole('button', { name: 'Off' }).click()
+  await byPrice.click()
+  await expect(byPrice).toHaveAttribute('aria-pressed', 'true')
   await page.locator('[data-loot-class="currency"]').click()
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()

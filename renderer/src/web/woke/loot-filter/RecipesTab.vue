@@ -14,7 +14,7 @@
       <span :class="$style.gives" class="w-dim text-xs">→ <span v-item-tip="{ name: r.art }">{{ r.gives }}</span><span v-if="r.worth != null" data-recipe-worth> · {{ chaosText(r.worth) }}</span></span>
       <span class="grow" />
       <LabelPreview v-if="r.step" :text="r.name" :actions="[]" :style-override="currencyFullLook(r.step, 'other', c)" visibility="Show" :extras="false" :scale="0.7" data-no-item-tip="a recipe's sample label, not an item" />
-      <WChip clickable :active="r.picked == null" :class="$style.auto" :title="r.worth == null ? 'By price: waiting for prices' : 'By price: the step its reward\'s price reaches. Pick a step to set it by hand.'" data-recipe-auto @click="setRecipeStep(c, r.id, null)">By price</WChip>
+      <WChip clickable :active="r.picked == null" :aria-pressed="r.picked == null" :class="$style.auto" :title="r.worth == null ? 'By price: waiting for prices' : 'By price: the step its reward\'s price reaches. Pick a step to set it by hand.'" data-recipe-auto @click="setRecipeStep(c, r.id, null)">By price</WChip>
       <WSegmented :model-value="String(r.step)" :options="STEPS" role="group" :aria-label="`${r.name}: Off or the step it shows at`" @update:model-value="v => setRecipeStep(c, r.id, Number(v) as CStep)" />
     </div>
     <p class="text-sm w-dim">{{ note }}</p>
