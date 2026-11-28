@@ -59,7 +59,9 @@
       <li>Every rare Normal until Act 3, then rares on a base within 10 levels of the area. Big rares (2x3 and up) one step quieter. Rare boots and jewellery always Normal.</li>
       <li>Every white and blue ring, amulet and belt until Act 2, then Ruby, Sapphire, Topaz and Two-Stone rings, Leather and Heavy belts, Amber, Jade, Lapis and Onyx amulets until Act 6.</li>
       <li>Life, mana and hybrid flasks: the two newest sizes for the area, the newest louder with a sound; older sizes without quality hide. Every utility flask, Quicksilver louder.</li>
+      <li>Your armour: every white and blue piece in Act 1, then on a base within 5 levels of the area, Small. Other white and blue gear hides.</li>
       <li>Every unique at least Normal; prices make it louder.</li>
+      <li>Quest-like items (lab trinkets and keys, incursion items, heist targets) green with a moon on the minimap, everywhere.</li>
       <li>Every gem at least Normal before Act 4, gems with quality Small until maps. Your build's gems stay on the Build tab, louder.</li>
     </ul>
   </div>
@@ -89,7 +91,7 @@ const layer = computed(() => lvOn(c.value))
 const lvOk = computed(() => lvConds(c.value) != null)
 const layerNote = computed(() => gate.value === 0
   ? 'Only with the Loot looks below maps.'
-  : layer.value ? 'On: supplies, uniques and gems below maps.' : 'Off: prices alone decide below maps.')
+  : layer.value ? 'On: below maps these rules replace NeverSink\'s levelling rules.' : 'Off: prices and NeverSink\'s levelling rules decide below maps.')
 
 // The build template (pick "weapons" A and Guy's note: templates by build
 // type). Shared with the Presets tab's "only weapons for" switch.
