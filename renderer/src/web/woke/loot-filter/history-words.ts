@@ -48,10 +48,9 @@ function num (v: number): string {
 }
 const chaos = (v: unknown) => typeof v === 'number' ? `${num(v)}c` : undefined
 const plain = (v: unknown): string | undefined => v == null ? undefined : typeof v === 'number' ? num(v) : typeof v === 'boolean' ? (v ? 'on' : 'off') : typeof v === 'string' ? v : JSON.stringify(v)
-const pct = (p: number) => p === 0 ? '0%' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`
-// A section's bias in notches, as its chip words it (+1 notch stricter = −20%).
-const nudgePct = (n: unknown) => pct(Math.round((1.25 ** -(Number(n) || 0) - 1) * 100))
-const multPct = (m: unknown) => m == null ? '0%' : pct(Math.round((Number(m) - 1) * 100))
+// A Price bias as the sliders word it: the % of its price it counts at.
+const biasPct = (p: unknown) => `${p == null ? 100 : Math.round(Number(p))}%`
+const multPct = (m: unknown) => biasPct(m == null ? null : Number(m) * 100)
 const stepName = (s: unknown) => s == null ? 'price decides' : CSTEP_NAMES[Number(s)] ?? String(s)
 
 const PAGE_NAMES: Record<string, string> = { all: 'Every page', currency: 'Currency', fragments: 'Fragments', cards: 'Cards', uniques: 'Uniques', gems: 'Gems', maps: 'Maps', jewels: 'Jewels', league: 'League items', gold: 'Gold' }
@@ -110,8 +109,8 @@ function currencyChanges (b: Partial<CurrencySettings>, a: Partial<CurrencySetti
     if (!same(b.from?.[i], a.from?.[i])) out.push({ tab: L, key: `cur.from.${i}`, where: 'Main ruler', what: `${CSTEP_NAMES[i + 2]} starts`, from: chaos(b.from?.[i]), to: chaos(a.from?.[i]) })
   }
   if (!same(b.mult, a.mult)) out.push({ tab: L, key: 'cur.mult', where: 'Loot tab', what: 'Strictness', from: b.mult == null ? 'follows the filter' : `×${num(b.mult)}`, to: a.mult == null ? 'follows the filter' : `×${num(a.mult)}` })
-  for (const c of keysOf(b.nudge, a.nudge)) {
-    if (!same(b.nudge?.[c], a.nudge?.[c])) out.push({ tab: L, key: `cur.nudge.${c}`, where: catName(c), what: 'price bias', from: nudgePct(b.nudge?.[c]), to: nudgePct(a.nudge?.[c]) })
+  for (const c of keysOf(b.bias, a.bias)) {
+    if (!same(b.bias?.[c], a.bias?.[c])) out.push({ tab: L, key: `cur.bias.${c}`, where: catName(c), what: 'price bias', from: biasPct(b.bias?.[c]), to: biasPct(a.bias?.[c]) })
   }
   for (const c of keysOf(b.catMode, a.catMode)) {
     if (!same(b.catMode?.[c], a.catMode?.[c])) out.push({ tab: L, key: `cur.mode.${c}`, where: catName(c), what: 'shows', from: modeName(b.catMode?.[c]), to: modeName(a.catMode?.[c]) })
@@ -165,7 +164,7 @@ function currencyChanges (b: Partial<CurrencySettings>, a: Partial<CurrencySetti
     const s = (v?: string) => v === 'on' ? 'On' : v === 'off' ? 'Off' : 'Auto'
     out.push({ tab: L, key: 'cur.sizeCut', where: 'Uniques', what: 'size cut', from: s(b.sizeCut), to: s(a.sizeCut) })
   }
-  const known = new Set(['on', 'line', 'from', 'mult', 'nudge', 'catMode', 'rulers', 'offBy', 'items', 'steps', 'cats', 'faint', 'mapFrom', 'gold', 'chaseLook', 'notAvg', 'sizeCut', 'sizeOn'])
+  const known = new Set(['on', 'line', 'from', 'mult', 'bias', 'catMode', 'rulers', 'offBy', 'items', 'steps', 'cats', 'faint', 'mapFrom', 'gold', 'chaseLook', 'notAvg', 'sizeCut', 'sizeOn'])
   for (const k of keysOf(b, a)) {
     if (!known.has(k)) out.push(...leaves(L, `cur.${k}`, 'Loot tab', (b as Record<string, unknown>)[k], (a as Record<string, unknown>)[k], [k]))
   }

@@ -9,6 +9,7 @@
 // for influence and fractured included). A row set Off writes nothing: the
 // item is judged as any other gear below. In maps NeverSink's own copies of
 // these rules stop (retireSpecial), so ours decide; while levelling they stay.
+import { ownBottom } from './own-base'
 import type { LootCategory } from './fragment-classes'
 import type { FilterBlock, FilterCondition, FilterDoc } from './parse'
 import type { CStep, SectionMode } from './currency-settings'
@@ -189,5 +190,8 @@ export function retireSpecial (doc: FilterDoc, gate: readonly FilterCondition[])
 export function specialAnchor (doc: FilterDoc): number {
   const first = (re: RegExp) => doc.blocks.find((b): b is FilterBlock => b.type != null && re.test(b.type))
   const at = first(SPECIAL_ANCHOR) ?? first(SPECIAL_NS_TYPE) ?? doc.blocks.find(b => !b.type?.startsWith('woke->'))
-  return at ? doc.chunks.indexOf(at) : doc.chunks.length
+  if (at) return doc.chunks.indexOf(at)
+  // Our own skeleton: above its rest rules, not under its catch-all.
+  const bottom = ownBottom(doc)
+  return bottom < 0 ? doc.chunks.length : bottom
 }

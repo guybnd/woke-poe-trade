@@ -232,7 +232,38 @@ function setVisibility (block: FilterBlock, visibility: Visibility): void {
 
 // ---- lookups ----
 
+// While edits apply, the blocks by type: each edit asks for its tier, and a
+// filter of 6,000 rules was walked once per edit (176 edits on every change).
+let blockIndex: { doc: FilterDoc, byType: Map<string | null, FilterBlock[]> } | null = null
+function indexBlocks (doc: FilterDoc): Map<string | null, FilterBlock[]> {
+  const byType = new Map<string | null, FilterBlock[]>()
+  for (const b of doc.blocks) {
+    const list = byType.get(b.type)
+    if (list) list.push(b)
+    else byType.set(b.type, [b])
+  }
+  return byType
+}
+
+// Runs `fn` with blocksOf answered from an index of `doc`. Only for code
+// that adds blocks through applyOne (which keeps the index up to date) or
+// not at all.
+export function withBlockIndex<T> (doc: FilterDoc, fn: () => T): T {
+  if (blockIndex?.doc === doc) return fn()
+  const outer = blockIndex
+  blockIndex = { doc, byType: indexBlocks(doc) }
+  try {
+    return fn()
+  } finally {
+    blockIndex = outer
+  }
+}
+
 export function blocksOf (doc: FilterDoc, type: string, tier?: string): FilterBlock[] {
+  if (blockIndex?.doc === doc) {
+    const list = blockIndex.byType.get(type) ?? []
+    return tier === undefined ? [...list] : list.filter(b => b.tier === tier)
+  }
   return doc.blocks.filter(b => b.type === type && (tier === undefined || b.tier === tier))
 }
 
@@ -272,7 +303,7 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
     case 'group': {
       // Only this group: the editor lists `currency->trial->omen` and the rest
       // as groups of their own, so hiding Currency mustn't hide Omens too.
-      const blocks = doc.blocks.filter(b => b.type === edit.type)
+      const blocks = blocksOf(doc, edit.type)
       if (!blocks.length) return { edit, ok: false, blocks: 0, message: 'Group not found in this filter' }
       if (edit.hidden) for (const b of blocks) if (b.visibility !== 'Hide') setVisibility(b, 'Hide')
       return { edit, ok: true, blocks: blocks.length }
@@ -414,6 +445,7 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
       doc.chunks.splice(doc.chunks.indexOf(before), 0, clone)
       doc.blocks.splice(doc.blocks.indexOf(before), 0, clone)
       doc.blocks.forEach((b, i) => { b.index = i })
+      if (blockIndex?.doc === doc) blockIndex.byType = indexBlocks(doc)
       return { edit, ok: true, blocks: 1 }
     }
   }
@@ -425,8 +457,10 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
 // look it had when you made it, even if you hide the tier afterwards.
 export function applyEdits (doc: FilterDoc, edits: FilterEdit[]): EditStatus[] {
   const order = [...edits.filter(e => e.kind === 'move'), ...edits.filter(e => e.kind !== 'move')]
-  const results = new Map(order.map(e => [e, applyOne(doc, e)]))
-  return edits.map(e => results.get(e)!)
+  return withBlockIndex(doc, () => {
+    const results = new Map(order.map(e => [e, applyOne(doc, e)]))
+    return edits.map(e => results.get(e)!)
+  })
 }
 
 // ---- recording ----
