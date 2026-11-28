@@ -32,7 +32,7 @@
     <div :class="$style.verdict">
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
       <span :class="[$style.big, shown === 0 && verdict !== 'Faint' ? $style.down : $style.up]" data-currency-card-now>
-        <button v-if="allHides" type="button" :class="$style.why" :title="`${decides}.\n${ALL_HELP}\nClick to open it on the Loot tab.`" data-currency-card-all @click="emit('open-tab', it.cat, it.name)">{{ verdict }}</button>
+        <template v-if="allHides"><button type="button" :class="$style.why" :title="`${decides}. Click to open it on the Loot tab.`" data-currency-card-all @click="emit('open-tab', it.cat, it.name)">{{ verdict }}</button> <WInfo :text="ALL_HELP" /></template>
         <template v-else>{{ verdict }}</template>
       </span>
       <span class="grow" />
