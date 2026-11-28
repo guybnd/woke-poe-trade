@@ -18,7 +18,7 @@ import { driverSeed } from './drivers'
 import { priceView } from './view'
 import { poepricesState, measuredDrivers, checkedFair, modWorth, loadPoeprices } from './check-state'
 import { isValuableBasetype } from '@/web/price-check/trends/getDetailsId'
-import type { BaseSnapshot } from './base-preset'
+import type { BaseState } from './base-preset'
 
 const props = defineProps<{ stats: FilterOrGroup[], item: ParsedItem, league: string, filters?: ItemFilters }>()
 const { selectedId } = useLeagues()
@@ -28,7 +28,7 @@ const showValue = computed(() => priceView.value === 'improved' && props.item.ra
 
 // Gear that isn't unique (base-preset.ts, loaded on the first click).
 const showBase = computed(() => props.filters != null && !props.item.isUnidentified && isValuableBasetype(props.item))
-const BASE_TITLE = 'Price it as its base: base, item level, influence and quality over 20 on, mods off. Click again to undo.'
+const BASE_TITLE = 'Price it as its base: base, item level, influence, quality over 20; mods off. Click again to undo.'
 
 const options = computed(() => [
   ...(showBase.value ? [{ value: 'base', label: 'Base', title: BASE_TITLE, attrs: { 'data-base-preset': '' } }] : []),
@@ -91,8 +91,9 @@ const sig = () => JSON.stringify(props.stats)
 watch(() => props.item, () => { valueSig.value = null; base.value = null })
 
 // "Base" stays lit until a box or tick is changed by hand; a second click puts the old ticks back.
-const base = shallowRef<{ snap: BaseSnapshot, sig: string, sign: typeof import('./base-preset').baseSignature } | null>(null)
-const baseOn = computed(() => base.value != null && props.filters != null && base.value.sig === base.value.sign(props.filters, props.stats))
+let baseMod: typeof import('./base-preset') | undefined
+const base = shallowRef<BaseState | null>(null)
+const baseOn = computed(() => !!(base.value && props.filters && baseMod?.isBaseOn(base.value, props.filters, props.stats)))
 
 const active = computed(() => {
   if (baseOn.value) return 'base'
@@ -101,34 +102,22 @@ const active = computed(() => {
 })
 
 let baseBusy = false
-async function pickBase () {
-  const filters = props.filters
+async function pickBase (keepOn = false) {
+  const { filters, item } = props
   if (!filters || baseBusy) return
-  const item = props.item
   baseBusy = true
-  let mod: typeof import('./base-preset')
-  try { mod = await import('./base-preset') } finally { baseBusy = false }
-  const { applyBasePreset, restoreBasePreset, baseSignature } = mod
-  // Another item or preset came up while the code loaded.
-  if (props.item !== item || props.filters !== filters) return
-  if (baseOn.value) {
-    restoreBasePreset(filters, base.value!.snap)
-    base.value = null
-  } else {
-    const snap = applyBasePreset(item, filters, props.stats)
-    base.value = { snap, sig: baseSignature(filters, props.stats), sign: baseSignature }
-  }
-  valueSig.value = null
-  emit('apply', 'base')
+  try {
+    baseMod ??= await import('./base-preset')
+    // Another item or preset came up while the code loaded.
+    if (props.item !== item || props.filters !== filters) return
+    if (!(keepOn && baseOn.value)) base.value = baseMod.toggleBase(base.value, item, filters, props.stats)
+    valueSig.value = null
+    emit('apply', 'base')
+  } finally { baseBusy = false }
 }
 
 // The base price chip's click: turn the Base step on (never off) and search.
-defineExpose({
-  runBase () {
-    if (baseOn.value) emit('apply', 'base')
-    else pickBase().catch(() => {})
-  }
-})
+defineExpose({ runBase: () => pickBase(true).catch(() => {}) })
 
 function pick (value: string) {
   if (value === 'base') {

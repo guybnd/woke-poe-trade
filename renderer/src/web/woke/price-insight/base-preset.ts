@@ -98,3 +98,19 @@ export function restoreBasePreset (filters: ItemFilters, snap: BaseSnapshot) {
 export function baseSignature (filters: ItemFilters, stats: FilterOrGroup[]): string {
   return JSON.stringify([{ ...filters, trade: undefined }, stats.flatMap(s => s.group ? [s.meta, ...s.stats] : [s]).map(f => [f.disabled, f.roll?.min, f.roll?.max])])
 }
+
+export interface BaseState { snap: BaseSnapshot, sig: string }
+
+export function isBaseOn (state: BaseState, filters: ItemFilters, stats: FilterOrGroup[]): boolean {
+  return state.sig === baseSignature(filters, stats)
+}
+
+/** A click on Base: on, or back to the old ticks when it's on. */
+export function toggleBase (state: BaseState | null, item: ParsedItem, filters: ItemFilters, stats: FilterOrGroup[]): BaseState | null {
+  if (state && isBaseOn(state, filters, stats)) {
+    restoreBasePreset(filters, state.snap)
+    return null
+  }
+  const snap = applyBasePreset(item, filters, stats)
+  return { snap, sig: baseSignature(filters, stats) }
+}
