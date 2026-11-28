@@ -140,3 +140,14 @@ describe('special maps on the Loot tab', () => {
     expect(Number(ravaged.final?.block.tier?.slice(1))).toBeGreaterThanOrEqual(4)
   })
 })
+
+describe('Originator maps from the clipboard', () => {
+  it('reads "Originator\'s Memories" as a Zana memory map', async () => {
+    const fs = await import('fs')
+    const { itemFacts } = await import('@/web/woke/loot-filter/item-facts')
+    for (const f of ['map-originator-t16', 'map-originator-implicit']) {
+      const text = fs.readFileSync(`../testing/fixtures/items/${f}.txt`, 'utf8')
+      expect(itemFacts(text, null).zanaMemory, f).toBe(true)
+    }
+  })
+})
