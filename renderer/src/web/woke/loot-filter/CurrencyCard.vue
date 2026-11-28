@@ -3,7 +3,7 @@
        2026-11-28): the answer first (its look and step), a Shows switch, a
        ruler of the five steps with a mark at its worth, a Price bias, every
        unique the base can be, then its section and its own state. -->
-  <div v-if="it" :class="$style.card" data-currency-card>
+  <div v-if="it" :class="$style.card" :data-currency-card="it.name">
     <div :class="$style.verdict">
       <LabelPreview :text="it.name" :actions="[]" :style-override="currencyFullLook(shown === 0 ? 1 : shown, it.cat, cfg)" :visibility="shown === 0 ? 'Hide' : 'Show'" :extras="false" :scale="0.6" />
       <span :class="$style.big" data-currency-card-now>{{ verdict }}</span>
@@ -186,7 +186,11 @@ const liveMult = computed(() => dragNotch.value != null ? 1.25 ** dragNotch.valu
 const catName = computed(() => ALL_CATEGORIES.find(x => x.id === it.value?.cat)?.name ?? 'Other')
 // Tells the card above which section and row this is (its Go to rule and
 // rule name follow it).
-watch(() => it.value && [it.value.cat, catName.value, it.value.name] as const, p => emit('place', p ? { cat: p[0], catName: p[1], name: p[2] } : null), { immediate: true })
+const SECTION_NAMES: Record<string, string> = { gemexc: 'Exceptional gems', gemawk: 'Awakened gems', gemtrans: 'Transfigured gems', gemvaal: 'Vaal gems', gemsup: 'Supports', gemskill: 'Skill gems' }
+// A gem section's own Always / Hide rule has no row: its section still is the place.
+const secRule = computed(() => /: (gem[a-z]+), (always|off)\b/.exec(props.note ?? ''))
+watch(() => it.value ? [it.value.cat, catName.value, it.value.name] as const : secRule.value ? [secRule.value[1], SECTION_NAMES[secRule.value[1]] ?? secRule.value[1], props.name] as const : null,
+  p => emit('place', p ? { cat: p[0], catName: p[1], name: p[2] } : null), { immediate: true })
 onBeforeUnmount(() => emit('place', null))
 const catCss = computed(() => `rgb(${catColour(it.value?.cat ?? 'other', cfg.value).rgb.join(',')})`)
 
@@ -209,7 +213,6 @@ const starts = computed(() => stepStarts(eff.value, it.value?.cat ?? ''))
 
 // Rules the Loot tab writes that aren't an item's price step (Guy's picks
 // alt-f-hides and alt-f-floors, 2026-11-28): say which one caught it.
-const SECTION_NAMES: Record<string, string> = { gemexc: 'Exceptional gems', gemawk: 'Awakened gems', gemtrans: 'Transfigured gems', gemvaal: 'Vaal gems', gemsup: 'Supports', gemskill: 'Skill gems' }
 const floorLine = computed(() => {
   const note = props.note ?? ''
   const sec = /: (gem[a-z]+), (always|off)\b/.exec(note)
@@ -232,7 +235,7 @@ const placeLine = computed(() => {
 })
 
 // Where Open goes: the rule's own section, or Recipes for a recipe rule.
-const openTier = computed(() => /: recipe: /.test(props.note ?? '') ? 'recipes' : props.tier && lootFocus(props.tier) ? props.tier : null)
+const openTier = computed(() => /: recipe: /.test(props.note ?? '') ? 'recipes' : secRule.value ? `cat:${secRule.value[1]}:${props.name}` : props.tier && lootFocus(props.tier) ? props.tier : null)
 
 // The step a worth gets by price alone (a step turned off hides it).
 function stepAt (v: number): CStep {
