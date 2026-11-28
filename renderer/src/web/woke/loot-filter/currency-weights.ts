@@ -574,8 +574,8 @@ export const CAT_LOOK: Record<string, { text: [number, number, number], color: s
 
 // The ladder (Guy 2026-11-27, O2C: the orange the game's players know).
 // Small: the category colour on black. Normal: a vivid category colour on a
-// dark box of it. Decent: black on amber, Big: black on orange, both edged in
-// the category colour. Tink: red on white with the category's border and map
+// dark box of it. Decent and Big: currency black on amber and on orange, edged
+// in the category colour; other classes their own fills (CLASS_FILL). Tink: red on white with the category's border and map
 // icon (beam red).
 // A step sets loudness only (size, sound, beam, icon size): its edits apply to
 // every category. A category sets its colour and map icon.
@@ -592,7 +592,7 @@ const vivid = (c: number[]) => { const g = (c[0] + c[1] + c[2]) / 3; return c.ma
 type Rgb = [number, number, number]
 export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb }, big: { bg: Rgb, text: Rgb, edge: Rgb } }>> = {
   gems: { decent: { bg: [27, 200, 190], text: [0, 0, 0] }, big: { bg: [0, 100, 95], text: [255, 255, 255], edge: [190, 255, 250] } },
-  uniques: { decent: { bg: [215, 130, 55], text: [0, 0, 0] }, big: { bg: [125, 55, 15], text: [255, 255, 255], edge: [255, 225, 190] } },
+  uniques: { decent: { bg: [185, 125, 75], text: [0, 0, 0] }, big: { bg: [125, 55, 15], text: [255, 255, 255], edge: [255, 225, 190] } },
   cards: { decent: { bg: [120, 200, 255], text: [0, 0, 0] }, big: { bg: [0, 75, 190], text: [255, 255, 255], edge: [205, 235, 255] } },
   fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
   // Maps: grey, then the black on white map players know, edged in map gold
@@ -624,8 +624,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
   switch (step) {
     case 1: Object.assign(out, { text: col(rgb), border: col(mixTo(rgb, 0, 0.55)), background: col([0, 0, 0], 215) }); break
     case 2: { const k = vivid(rgb); Object.assign(out, { text: col(k), border: col(k), background: col(mixTo(k, 0, 0.8)) }); break }
-    case 3: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.decent.text), border: col(mixTo(rgb, 255, 0.45)), background: col(f.decent.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break }
-    case 4: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.big.text), border: col(f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
+    case 3: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.decent.text), border: col(mixTo(rgb, 0, 0.55)), background: col(f.decent.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 190, 0]) }); break }
+    case 4: { const f = CLASS_FILL[kindOf(cat)]; Object.assign(out, f ? { text: col(f.big.text), border: col(c.cats[cat]?.text ? rgb : f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
