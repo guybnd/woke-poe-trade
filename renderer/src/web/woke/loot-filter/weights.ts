@@ -195,7 +195,8 @@ export function baseTerms (b: Pick<BaseRow, 'rank' | 'width' | 'height' | 'old'>
   const out: WeightKey[] = [b.rank]
   if (b.width >= 2 && b.height >= 3) out.push('big')
   else if (b.height === 1) out.push('tiny')
-  if (b.old) out.push('old')
+  // An exotic base is worth its implicit, not its defences: never old.
+  if (b.old && b.rank !== 'x1' && b.rank !== 'x2') out.push('old')
   return out
 }
 
