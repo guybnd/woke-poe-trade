@@ -1,5 +1,6 @@
 # Next release notes
 
+- Loot filter, Loot tab: All loot takes one line: Strictness, Maps and where each step starts (Normal 2.5c · Decent 5.6c...). Click All loot or the prices to open the ruler. What Strictness does is in its tooltip, and the page's Size cut and "never show" count sit on its top row.
 - Loot filter, Loot tab: each page has its own bar again, under All loot (Currency, Uniques...). It follows All loot until you change it: turn a step off for that page only, or give the page its own ruler. A section can still have its own.
 - Loot filter, Loot tab: All loot is now one card at the top of the tab, above the page list, so it reads as the setting every page follows. It holds one Strictness slider (it sets the filter's strictness, the same level the Maps ladder and the in-game hotkeys step), the Maps chip and the All loot ruler. The separate Strictness menu is gone. A page's Size cut and its "never show" count stay on the page.
 - Loot filter, Loot tab Uniques: 6-linked uniques, Tabula Rasa too, no longer drop as Tink. They have a new 6-links section with a look of their own (white on unique brown, a white beam and star) at Big loudness, priced at the 20 Orbs of Fusing a vendor gives for one instead of the best 6-linked unique's price. A 6-linked unique whose base is worth Tink on its own still shows Tink. Set a row's step or price to change it.

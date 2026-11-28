@@ -1652,6 +1652,12 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await overlay.snap('loot tab, levelling build')
   await page.locator('[data-levelling-build]').getByRole('button', { name: 'Auto (PoB)' }).click()
   await page.locator('[data-loot-class="currency"]').click()
+  // All loot is one line until opened (Guy 2026-11-28): its step prices show folded.
+  const allOpenBtn = page.locator('[data-loot-all-open]')
+  if (await allOpenBtn.getAttribute('aria-expanded') === 'false') {
+    await expect(page.locator('[data-loot-all-prices]')).toContainText('Decent')
+    await allOpenBtn.click()
+  }
   await expect(page.getByRole('group', { name: 'Where each step starts' })).toBeVisible()
   await expect(page.locator('[data-currency-pile]')).toBeVisible()
   await expect(page.locator('[data-currency-cat="orbs"]')).toBeVisible()

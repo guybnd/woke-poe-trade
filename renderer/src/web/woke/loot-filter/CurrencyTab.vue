@@ -9,27 +9,34 @@
         <WToggle :model-value="config.ownBase === true" @update:model-value="config.ownBase = $event">Test: only our rules</WToggle>
         <WInfo :text="'For testing the filter without NeverSink: your Loot, Equipment and own rules go onto a short base of ours.\n- Plain and magic gear hides in maps.\n- An item none of our rules knows shows pink.'" />
       </span>
+      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
+        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
+        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
+      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
       <WButton v-if="changed" size="sm" variant="ghost" icon="fas fa-undo" title="Line, step prices and category price bias back to the start; your item edits stay" @click="reset">Defaults</WButton>
     </div>
 
     <!-- All loot (Guy's H1, 2026-11-28): one card above the page list and the page, so it reads as the global one: Strictness, Maps and the ruler every page and section follows. -->
     <Teleport :to="topTo || 'body'" :disabled="!topTo" defer>
     <div :class="$style.allCard" data-loot-all>
-    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span></div>
-    <div :class="$style.minBar" data-currency-min>
+    <!-- One line unless opened (Guy 2026-11-28: it took too much room): Strictness, Maps and the step prices; open it to drag the ruler. -->
+    <div :class="$style.allLine" data-currency-main-ruler data-currency-all-steps data-currency-min>
+      <button type="button" :class="$style.allFold" :aria-expanded="allOpen" :title="`All loot: every page and section, unless a section has its own${ownCount ? ` (${ownCount} on this page have their own)` : ''}. Click to ${allOpen ? 'fold' : 'open'} the ruler`" data-loot-all-open @click="allOpen = !allOpen"><i class="fas text-xs" :class="allOpen ? 'fa-chevron-down' : 'fa-chevron-right'" /> <b>All loot</b></button>
       <span :class="$style.minLab">Strictness</span>
-      <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]"
+      <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]" :title="strictLine"
         @input="dragLvl = Number(($event.target as HTMLInputElement).value)"
         @change="setLevel(Number(($event.target as HTMLInputElement).value))">
-      <b :class="$style.minVal" data-currency-strict-level>{{ LEVEL_NAMES[dragLvl ?? lvlNow] }}</b>
+      <b :class="$style.minVal" data-currency-strict-level :title="strictLine">{{ LEVEL_NAMES[dragLvl ?? lvlNow] }}</b>
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
-      <span v-else class="w-faint text-xs">default</span>
       <StrictnessMenu :store="store" :config="config" />
+      <span class="flex-1" />
+      <button v-if="!allOpen" type="button" :class="$style.allPrices" title="Where each step starts, after Strictness. Click to open the ruler" data-loot-all-prices @click="allOpen = true">{{ allPrices }}</button>
     </div>
-
+    <template v-if="allOpen">
     <div class="w-faint text-xs" data-currency-strict-line>{{ strictLine }}</div>
     <StepRuler main toggles :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="allOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" @toggle="toggleAll" />
+    </template>
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
         <b>Faint</b>
@@ -79,13 +86,6 @@
       <StepRuler v-if="c.rulers[kind]" :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(kind, i, v)" />
     </div>
 
-    <div :class="$style.pageBar" data-currency-page-bar>
-      <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
-        <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
-        <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
-      <span class="flex-1" />
-      <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
-    </div>
 
     <slot name="extra" />
 
@@ -226,6 +226,7 @@ import LabelPreview from './LabelPreview.vue'
 import StyleEditor from './StyleEditor.vue'
 import StepRuler from './StepRuler.vue'
 import StrictnessMenu from './StrictnessMenu.vue'
+import { allOpen } from './all-open'
 import { ICON_SHAPES, POE_COLOURS, shapeGlyph } from './colours'
 import type { StylePatch } from './edits'
 import type { LootFilterStore } from './store'
@@ -548,6 +549,11 @@ function setOwn (cat: string, i: number, shown: number) {
 // page level: a page's steps saved before go to each of its sections that
 // had none, the first time the page opens.
 const allOff = computed(() => c.value.offBy.all ?? [])
+// The folded All loot line's step prices, after Strictness; a step turned
+// off everywhere is left out.
+const allPrices = computed(() => stepStarts({ ...eff.value, rulers: {} }).map((v, i) => allOff.value.includes(i + 1) ? null : `${CSTEP_NAMES[i + 1]} ${chaosText(v)}`).filter(Boolean).join(' · '))
+// Picking a step's look opens the card, where its editor shows.
+watch(stepEdit, v => { if (v != null) allOpen.value = true })
 function toggleAll (s: number) {
   setOff('all', flip(allOff.value, s))
 }
@@ -666,8 +672,11 @@ function chaosText (v: number): string {
 </script>
 
 <style module>
-.allCard { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
-.pageBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.allLine { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; }
+.allFold { display: inline-flex; align-items: center; gap: 5px; background: none; border: 0; padding: 0; color: var(--w-text); cursor: pointer; font-size: var(--w-fs-sm); }
+.allPrices { background: none; border: 0; padding: 0; color: var(--w-dim); font-size: var(--w-fs-xs); cursor: pointer; font-variant-numeric: tabular-nums; }
+.allPrices:hover { color: var(--w-text); }
+.allCard { display: flex; flex-direction: column; gap: 6px; padding: 5px 10px; border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel); }
 .wrap {
   max-height: min(40rem, calc(78vh / var(--w-ui-scale, 1)));
   flex: 1 1 auto;
@@ -701,7 +710,6 @@ function chaosText (v: number): string {
 .subName { font-size: var(--w-fs-sm); color: #d8c89c; min-width: 5.5rem; }
 .whole { display: inline-flex; align-items: center; gap: 6px; color: var(--w-dim); font-size: var(--w-fs-xs); }
 .sel2 { max-width: 7.5rem; background: var(--w-panel); border: 1px solid var(--w-line); border-radius: var(--w-r-sm); color: inherit; padding: 0 4px; }
-.minBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 10px; border: 1px solid var(--w-line); border-radius: var(--w-r-sm); background: var(--w-panel-2); }
 .minLab { color: #e2d3ad; font-size: var(--w-fs-sm); }
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .hidChip { font-size: var(--w-fs-xs); color: var(--w-dim); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 10px; padding: 0 8px; cursor: pointer; white-space: nowrap; }
