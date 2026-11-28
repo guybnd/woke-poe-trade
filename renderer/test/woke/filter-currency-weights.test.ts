@@ -86,13 +86,32 @@ describe('currency weights', () => {
     const c = defaultCurrency()
     const it = { name: 'Chaos Orb', cat: 'orbs', chaos: 0.3, full: 20, est: false } as never
     const all = stacksFor(it, c)
-    c.off = [1]
+    c.offBy = { currency: [1] }
     const s = stacksFor(it, c)
     // Where each step starts stays; the piles on a step turned off hide.
     expect(s).toEqual(all)
     expect(stepOfPile(s, 1, offSteps(it, c))).toBe(0)
     expect(stepOfPile(s, 10, offSteps(it, c))).toBe(stepOfPile(all, 10))
-    expect(normalizeCurrency(JSON.parse('{"off":[1,1,5,"x",2]}')).off).toEqual([1, 2])
+    expect(normalizeCurrency(JSON.parse('{"offBy":{"currency":[1,1,5,"x",2]}}')).offBy).toEqual({ currency: [1, 2] })
+  })
+
+  it('a step turned off on one page or section stays there (Guy 2026-11-28)', () => {
+    const c = defaultCurrency()
+    const orb = { name: 'Chaos Orb', cat: 'orbs' } as never
+    const ess = { name: 'Essence of Greed', cat: 'essences' } as never
+    const uniq = { name: 'Leather Belt', cat: 'uniqplain' } as never
+    c.offBy = { currency: [2] }
+    expect(offSteps(orb, c)).toEqual([2])
+    expect(offSteps(ess, c)).toEqual([2])
+    expect(offSteps(uniq, c)).toEqual([])
+    // A section's own steps win over its page's, both ways.
+    c.offBy = { currency: [2], essences: [], uniqplain: [1] }
+    expect(offSteps(orb, c)).toEqual([2])
+    expect(offSteps(ess, c)).toEqual([])
+    expect(offSteps(uniq, c)).toEqual([1])
+    // The old one list for every page was set on the Currency page.
+    expect(normalizeCurrency(JSON.parse('{"off":[2]}')).offBy).toEqual({ currency: [2] })
+    expect(normalizeCurrency({}).offBy).toEqual({})
   })
 
   it('guesses a price from NeverSink tiers', () => {
@@ -164,9 +183,33 @@ describe('currency weights', () => {
     expect(serializeFilter(doc)).toBe(serializeFilter(parseFilter(SEMI)))
   })
 
+  it('a section with its own ruler starts its steps there, Strictness on top, bias left out (Guy\'s A)', () => {
+    const c = defaultCurrency()
+    c.nudge = { essences: 2 }
+    c.rulers = { essences: [1, 2, 4, 8, 100] }
+    expect(stepStarts(c, 'essences')).toEqual([1, 2, 4, 8, 100])
+    expect(stepStarts(c, 'orbs')).toEqual([c.line, ...c.from.map(f => Math.max(c.line, f))])
+    c.mult = 2
+    expect(scaled(c, null).rulers.essences).toEqual([2, 4, 8, 16, 200])
+    expect(normalizeCurrency(JSON.parse('{"rulers":{"essences":[1,2,4,8,100],"oils":[5,1,2,3,4],"orbs":[1,2]}}')).rulers).toEqual({ essences: [1, 2, 4, 8, 100] })
+  })
+
+  it('a step turned off keeps its look on the hidden piles, quiet, for Alt (Guy 2026-11-28)', () => {
+    const compiled = applyCurrency(parseFilter(SEMI), on(c => { c.line = 0.5; c.offBy = { currency: [2] } }), lookup)!
+    const off = compiled.blocks.filter(b => b.comment.includes('Normal off'))
+    expect(off.length).toBeGreaterThan(0)
+    for (const b of off) {
+      expect(b.visibility).toBe('Hide')
+      const keys = b.actions.map(a => a.key)
+      expect(keys).toEqual(expect.arrayContaining(['SetTextColor', 'SetBorderColor', 'SetBackgroundColor']))
+      expect(b.actions.find(a => a.key === 'SetFontSize')?.args[0]).toBe('37')
+      for (const k of ['PlayAlertSound', 'PlayEffect', 'MinimapIcon']) expect(keys).not.toContain(k)
+    }
+  })
+
   it('a step turned off in the middle hides its piles instead of showing them quieter (Guy 2026-11-28)', () => {
     for (const off of [[3], [2, 4], [1]]) {
-      const cfg = on(c => { c.line = 0.5; c.off = off })
+      const cfg = on(c => { c.line = 0.5; c.offBy = Object.fromEntries(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'].map(k => [k, off])) })
       const doc = parseFilter(SEMI)
       const compiled = applyCurrency(doc, cfg, lookup)!
       let hidden = 0
@@ -311,7 +354,10 @@ describe('currency weights', () => {
     const c = on(() => {})
     const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
     const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
-    const all = kinds.flatMap(fills).map(x => x!.join(','))
+    const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
+    // Maps (Guy's B): black on white at Decent and Big, told apart by their tint's edge.
+    expect(fills('mapblight')).toEqual([[255, 255, 255], [255, 255, 255]])
+    expect(currencyLook(4, 'mapblight', c).border).not.toEqual(currencyLook(4, 'maporig', c).border)
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])

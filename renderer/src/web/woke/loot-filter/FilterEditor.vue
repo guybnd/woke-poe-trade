@@ -503,6 +503,10 @@ function onSearchPaste (e: ClipboardEvent) {
 }
 
 const tabFocus = ref<string | null>(null)
+// The tab a jump's focus is for. Kept until another tab opens: the Loot tab
+// is a lazy chunk that mounts after the next tick, so a focus cleared then
+// never reached it (Guy 2026-11-28: Go to rule opened Currency, not Gems).
+let focusTab: string | null = null
 const tab = ref<'rules' | 'preview' | 'presets' | 'gear' | 'ranks' | 'weights' | 'currency' | 'prices' | 'neversink' | 'build' | 'changes'>('rules')
 // Equipment shows (beta): Base ranks is its section, else a top tab.
 const equipShown = computed(() => experimentalUnlocked.value || props.config.presets.weights.on)
@@ -1097,11 +1101,13 @@ watch(() => props.focus, (f) => {
     // the Loot tab"); once, so opening the tab later starts where it always does.
     tabFocus.value = f.tier || null
     tab.value = f.type === WEIGHT_TYPE ? 'weights' : 'currency'
-    nextTick(() => { tabFocus.value = null }).catch(() => {})
+    focusTab = tab.value
     return
   }
   goTo(f.type, f.tier)
 }, { immediate: true })
+
+watch(tab, t => { if (focusTab && t !== focusTab) { focusTab = null; tabFocus.value = null } })
 
 watch(() => props.openTab, (t) => {
   if (!t) return

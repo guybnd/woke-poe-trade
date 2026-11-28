@@ -3,9 +3,9 @@
        left, the picked class on the right. Every class shares the one switch
        (Jewels: cluster jewels also have their own price switch). -->
   <div :class="$style.wrap" data-loot-tab>
-    <nav :class="$style.rail" aria-label="Loot classes">
-      <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" @click="sel = k.id">
-        <span :class="$style.sw" :style="{ background: `rgb(${k.rgb.join(',')})` }" aria-hidden="true" />
+    <nav :class="$style.rail" aria-label="Loot classes" data-no-item-tip="loot class names, not items">
+      <button v-for="k in LOOT_CLASSES" :key="k.id" type="button" :class="$style.cls" :aria-pressed="k.id === sel" :data-loot-class="k.id" :data-goto-spot="k.id === 'gold' ? 'loot-gold' : undefined" @click="sel = k.id">
+        <WIcon :item="k.art" :ns="k.ns" :title="k.name" :fallback="k.fa" />
         <span :class="$style.name">{{ k.name }}</span>
         <span :class="$style.state">{{ (config.presets.currency.on || (k.id === 'jewels' && config.presets.clusterPrices.on)) ? 'On' : 'Off' }}</span>
       </button>
@@ -20,6 +20,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { WIcon } from '../ui'
 import CurrencyTab from './CurrencyTab.vue'
 import MapsTab from './MapsTab.vue'
 import JewelsTab from './JewelsTab.vue'
@@ -39,23 +40,26 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ (e: 'open-rule', r: { type: string, tier: string }): void }>()
 
-// The classes, in the order Guy picked (round 1 and 2 mockups). Colours are
-// each class's family colour.
+// The classes, in the order Guy picked (round 1 and 2 mockups), each with an
+// item's art that stands for it (Guy 2026-11-28: "this needs icons"). Gold
+// has its own page next to Currency.
+type Ns = 'ITEM' | 'UNIQUE' | 'GEM' | 'DIVINATION_CARD'
 const LOOT_CLASSES = [
-  { id: 'currency', name: 'Currency', rgb: [255, 190, 0] },
-  { id: 'fragments', name: 'Fragments', rgb: [180, 120, 240] },
-  { id: 'cards', name: 'Divination cards', rgb: [14, 186, 255] },
-  { id: 'uniques', name: 'Uniques', rgb: [175, 96, 37] },
-  { id: 'gems', name: 'Gems', rgb: [27, 200, 190] },
-  { id: 'maps', name: 'Maps', rgb: [235, 235, 235] },
-  { id: 'jewels', name: 'Jewels', rgb: [90, 200, 110] },
-  { id: 'league', name: 'League items', rgb: [220, 170, 120] },
-  { id: 'recipes', name: 'Recipes', rgb: [200, 200, 200] }
-] as const
+  { id: 'currency', name: 'Currency', art: 'Chaos Orb', ns: 'ITEM', fa: 'fas fa-coins' },
+  { id: 'gold', name: 'Gold', art: 'Gold', ns: 'ITEM', fa: 'fas fa-coins' },
+  { id: 'fragments', name: 'Fragments', art: 'Fragment of the Phoenix', ns: 'ITEM', fa: 'fas fa-puzzle-piece' },
+  { id: 'cards', name: 'Divination cards', art: 'The Doctor', ns: 'DIVINATION_CARD', fa: 'fas fa-clone' },
+  { id: 'uniques', name: 'Uniques', art: 'Headhunter', ns: 'UNIQUE', fa: 'fas fa-gem' },
+  { id: 'gems', name: 'Gems', art: 'Enlighten Support', ns: 'GEM', fa: 'fas fa-gem' },
+  { id: 'maps', name: 'Maps', art: 'Map', ns: 'ITEM', fa: 'fas fa-map' },
+  { id: 'jewels', name: 'Jewels', art: 'Large Cluster Jewel', ns: 'ITEM', fa: 'fas fa-circle' },
+  { id: 'league', name: 'League items', art: 'Expedition Logbook', ns: 'ITEM', fa: 'fas fa-book' },
+  { id: 'recipes', name: 'Recipes', art: 'Chromatic Orb', ns: 'ITEM', fa: 'fas fa-flask' }
+] as const satisfies ReadonlyArray<{ id: string, name: string, art: string, ns: Ns, fa: string }>
 type ClassId = (typeof LOOT_CLASSES)[number]['id']
 
 // Classes prices decide already: one engine and one switch for both.
-const PRICED = new Set<ClassId>(['currency', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'])
+const PRICED = new Set<ClassId>(['currency', 'gold', 'fragments', 'cards', 'uniques', 'gems', 'maps', 'jewels', 'league'])
 const sel = ref<ClassId>('currency')
 const focusItem = ref<string | null>(null)
 watch(() => props.focus, f => {
@@ -102,7 +106,6 @@ const lootKind = computed(() => sel.value as LootKind)
 .cls:hover { background: var(--w-panel-2); }
 .cls[aria-pressed='true'] { border-color: var(--w-accent); background: var(--w-panel-2); }
 .cls:focus-visible { outline: 2px solid var(--w-accent); outline-offset: 1px; }
-.sw { width: 9px; height: 9px; border-radius: 2px; flex: none; }
 .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .state { font-size: var(--w-fs-xs); color: var(--w-dim); }
 .main { flex: 1 1 auto; min-width: 0; }
