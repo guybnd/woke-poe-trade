@@ -26,6 +26,19 @@
 
     <slot name="extra" />
 
+    <div :class="$style.stepRows" data-currency-all-steps>
+      <span :class="$style.stepRow">
+        <b :class="$style.rowLab" title="Untick a step to hide what lands on it on every Loot page. A page or a section can set its own.">Every page</b>
+        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!allOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} on every page`" @change="toggleAll(s)"> {{ CSTEP_NAMES[s] }}</label>
+      </span>
+      <span :class="$style.stepRow" data-currency-page-steps>
+        <b :class="$style.rowLab" :title="`Every ${KIND_NAME[kind]} section that doesn't set its own`">{{ PAGE_NAME }}</b>
+        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!pageOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in all ${KIND_NAME[kind]}`" @change="toggleOff(s)"> {{ CSTEP_NAMES[s] }}</label>
+        <span v-if="c.offBy[kind] == null" class="w-faint text-xs">as every page</span>
+        <button v-else type="button" class="w-icon-btn" :title="`${PAGE_NAME} steps back to every page's`" :aria-label="`${PAGE_NAME} steps back to every page's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
+        <span v-if="ownSteps.length" class="w-faint text-xs" :title="ownSteps.join(', ')">· {{ ownSteps.length === 1 ? `${ownSteps[0]} sets its own` : `${ownSteps.length} sections set their own` }}</span>
+      </span>
+    </div>
     <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span></div>
     <StepRuler main :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
@@ -44,8 +57,6 @@
     <div v-else-if="stepEdit" :class="$style.stepEd" data-currency-step-editor>
       <div :class="$style.stepEdHead">
         <b>{{ CSTEP_NAMES[stepEdit] }}</b>
-        <label v-if="stepEdit <= 4" :class="$style.offTog" :title="`Every ${KIND_NAME[kind]} section that doesn't set its own steps. Other pages keep theirs.`"><input type="checkbox" :checked="!pageOff.includes(stepEdit)" :aria-label="`Show ${CSTEP_NAMES[stepEdit]} in all ${KIND_NAME[kind]}`" @change="toggleOff(stepEdit)"> Show in all {{ KIND_NAME[kind] }}</label>
-        <span v-if="stepEdit <= 4 && ownSteps.length" class="w-faint text-xs" :title="ownSteps.join(', ')">{{ ownSteps.length === 1 ? `${ownSteps[0]} sets its own` : `${ownSteps.length} sections set their own` }}</span>
         <span class="flex-1" />
         <WButton size="sm" variant="ghost" icon="fas fa-undo" :disabled="!c.steps[stepEdit]" @click="setStepLook(stepEdit, null)">Back to built-in</WButton>
       </div>
@@ -111,8 +122,8 @@
         <div :class="$style.catLook" data-currency-cat-steps :data-goto-spot="g.cat.id === 'orbs' ? 'section-steps' : undefined">
           <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it, in ${g.cat.name} only`">Steps</span>
           <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!stepsOffIn(c, g.cat.id).includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in ${g.cat.name}`" @change="toggleSecOff(g.cat.id, s)"> {{ CSTEP_NAMES[s] }}</label>
-          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as the ruler</span>
-          <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to the ruler's`" :aria-label="`${g.cat.name} steps back to the ruler's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
+          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as the page</span>
+          <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to the page's`" :aria-label="`${g.cat.name} steps back to the page's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </div>
         <div v-if="g.cat.id !== 'gold'" :class="$style.goldRuler" data-currency-own-ruler :data-goto-spot="g.cat.id === 'orbs' ? 'section-ruler' : undefined">
           <span :class="$style.ownHead">
@@ -215,7 +226,7 @@ const CATS = computed(() => ALL_CATEGORIES.filter(x => kindOf(x.id) === props.ki
 const INFO = `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
 ${props.kind === 'currency' || props.kind === 'fragments' || props.kind === 'cards' ? '- A stack counts at its whole price. Big stacks of cheap items count less.' : ''}
 - Under the **line** it hides. Above it, each step starts at the price you set.
-- Untick **Show** on a step to hide it here; a section's **Steps** can differ.
+- Untick a step to hide it: every page, one page or one section.
 - Each section's chip sets **Hide**, **By price** or **Always**, and a **Price bias** on top of **Strictness**.
 - [[Click]] an item to set its step, price or look by hand.
 - No price: a guess from NeverSink's tier, marked **est.**
@@ -455,7 +466,12 @@ function setOwn (cat: string, i: number, shown: number) {
 
 // Steps off: the ruler's switch is this page's (every section that doesn't
 // set its own); a section's own row is that section's only (Guy 2026-11-28).
-const pageOff = computed(() => c.value.offBy[props.kind] ?? [])
+const allOff = computed(() => c.value.offBy.all ?? [])
+const pageOff = computed(() => c.value.offBy[props.kind] ?? allOff.value)
+const PAGE_NAME = KIND_NAME[props.kind].replace(/^./, x => x.toUpperCase())
+function toggleAll (s: number) {
+  setOff('all', flip(allOff.value, s))
+}
 const ownSteps = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null).map(x => x.name))
 const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
 function setOff (key: string, list: number[] | null) {
@@ -463,9 +479,10 @@ function setOff (key: string, list: number[] | null) {
   if (list) next[key] = list
   c.value.offBy = next
 }
+// Back to the same steps as every page: follows it again.
 function toggleOff (s: number) {
   const list = flip(pageOff.value, s)
-  setOff(props.kind, list.length ? list : null)
+  setOff(props.kind, list.join() === allOff.value.join() ? null : list)
 }
 // Back to the same steps as the ruler: follows it again.
 function toggleSecOff (cat: string, s: number) {
@@ -543,7 +560,7 @@ const statusText = computed(() => {
 const changed = computed(() => {
   const d = defaultCurrency()
   const mine = (o: Record<string, unknown>) => Object.keys(o).some(k => catIds.value.has(k))
-  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || pageOff.value.length > 0 || mine(c.value.offBy) || mine(c.value.rulers) || c.value.mult != null
+  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || c.value.offBy[props.kind] != null || mine(c.value.offBy) || mine(c.value.rulers) || c.value.mult != null
 })
 // This class's categories: Defaults leaves the other classes' sections (and
 // the League items' Offs) as they are.
@@ -617,6 +634,9 @@ function chaosText (v: number): string {
 .stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
 .ownHead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.stepRows { display: flex; flex-direction: column; gap: 2px; font-size: var(--w-fs-sm); }
+.stepRow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
+.rowLab { min-width: 6.5rem; }
 .mainLab { display: flex; align-items: baseline; gap: 8px; font-size: var(--w-fs-sm); }
 .goldRuler { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 2px; border-bottom: 1px solid var(--w-line); }
 .catLook { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 2px 4px; border-bottom: 1px solid var(--w-line); }
