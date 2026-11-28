@@ -1,7 +1,5 @@
 <template>
   <span :class="$style.wrap" data-goto-spot="loot-strictness" data-loot-strictness>
-    <WSelect v-if="ns.on" :model-value="String(ns.level)" :options="levelOptions" :class="$style.sel" aria-label="Strictness" @update:model-value="v => pick(Number(v))" />
-    <span v-else class="w-faint text-xs" title="Strictness comes from the filter file you picked">{{ fileLevel }}</span>
     <button v-if="ns.on" type="button" :class="[$style.maps, { [$style.on]: auto.on }]" :aria-expanded="open" data-loot-strict-maps
       :title="auto.on ? 'Strictness follows your maps: click for the ladder' : 'Strictness stays put: click to follow your maps'" @click="open = !open">
       <i class="fas fa-sync-alt" /> Maps<span v-if="auto.on && auto.paused" :class="$style.paused">paused</span>
@@ -32,15 +30,14 @@
 </template>
 
 <script setup lang="ts">
-// Strictness on the Loot tab's Main ruler (NeverSink retirement M3, Guy's
-// pick B, 2026-11-28): a menu in the ruler's header, and a Maps chip that
-// folds out the follow-my-maps ladder.
+// The Maps chip beside the Loot tab's Strictness slider (NeverSink
+// retirement M3; one Strictness control, H1, 2026-11-28): it folds out the
+// follow-my-maps ladder. The slider itself sets the level.
 import { computed, ref } from 'vue'
-import { WButton, WInfo, WKbd, WSelect, WToggle, toast } from '../ui'
+import { WButton, WInfo, WKbd, WSelect, WToggle } from '../ui'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { LEVEL_NAMES, RECENT_MAPS, stepLabel } from './strictness'
-import { levelOf } from './currency-weights'
 
 const props = defineProps<{
   store: LootFilterStore
@@ -52,20 +49,11 @@ const ns = computed(() => props.config.neversink)
 const auto = computed(() => props.config.strictAuto)
 const sortedLadder = computed(() => [...auto.value.ladder].sort((a, b) => a.from - b.from))
 const levelOptions = LEVEL_NAMES.map((name, i) => ({ value: String(i), label: name }))
-const fileLevel = computed(() => LEVEL_NAMES[levelOf(props.store.doc.value?.strictness ?? null)])
 
-async function pick (i: number) {
-  if (i === ns.value.level) return
-  const wasPaused = auto.value.paused
-  if (auto.value.on) auto.value.paused = true
-  const undo = await props.store.setLevel(i)
-  if (undo) toast(`Loot filter: ${LEVEL_NAMES[i]}`, { undo: () => { auto.value.paused = wasPaused; undo() } })
-}
 </script>
 
 <style module>
 .wrap { display: inline-flex; align-items: center; gap: 6px; }
-.sel { min-width: 8.5rem; }
 .maps {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 1px 7px;
@@ -80,6 +68,7 @@ async function pick (i: number) {
 .on { color: var(--w-fg); border-color: var(--w-accent); }
 .paused { color: var(--w-warn); }
 .fold {
+  flex-basis: 100%; order: 10;
   flex-basis: 100%;
   display: flex; flex-direction: column; gap: 6px;
   padding: 6px 8px;

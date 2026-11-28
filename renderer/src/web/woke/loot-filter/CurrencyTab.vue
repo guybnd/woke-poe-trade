@@ -20,6 +20,7 @@
       <b :class="$style.minVal" data-currency-strict-level>{{ LEVEL_NAMES[dragLvl ?? lvlNow] }}</b>
       <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
       <span v-else class="w-faint text-xs">default</span>
+      <StrictnessMenu :store="store" :config="config" />
       <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
         <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
         <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
@@ -37,7 +38,7 @@
       <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
     </div>
     <template v-else>
-    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span><span class="flex-1" /><StrictnessMenu :store="store" :config="config" /></div>
+    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span></div>
     <StepRuler main toggles :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="allOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" @toggle="toggleAll" />
     </template>
@@ -183,7 +184,7 @@
 // the steps and where they start, one ground pile, then every item in its
 // category, each with the stack it needs for each step and an editor.
 import { computed, nextTick, ref, watch } from 'vue'
-import { WButton, WChip, WIcon, WInfo, WItemRow, WPrice, WToggle } from '../ui'
+import { WButton, WChip, WIcon, WInfo, WItemRow, WPrice, WToggle, toast } from '../ui'
 import CurrencyPile from './CurrencyPile.vue'
 import { lootTipRef } from './base-tip'
 import MapsPile from './MapsPile.vue'
@@ -439,9 +440,25 @@ const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? 
 // the nearest level to a multiplier set before the levels.
 const lvlNow = computed(() => c.value.mult == null ? level.value : [0, 1, 2, 3, 4, 5, 6].reduce((a, n) => Math.abs(Math.log(strictMult(n) / c.value.mult!)) < Math.abs(Math.log(strictMult(a) / c.value.mult!)) ? n : a, 0))
 const dragLvl = ref<number | null>(null)
-function setLevel (n: number) {
+// One Strictness control (H1): with the filter's level ours to set, the
+// slider sets it (the Maps ladder and the in-game hotkeys step the same
+// level) and the Loot prices follow; on a filter file's own level it sets
+// the Loot prices alone.
+async function setLevel (n: number) {
+  const ns = props.config.neversink
+  if (!ns?.on) {
+    dragLvl.value = null
+    c.value.mult = n === level.value ? null : strictMult(n)
+    return
+  }
+  c.value.mult = null
+  if (n === ns.level) { dragLvl.value = null; return }
+  const auto = props.config.strictAuto
+  const wasPaused = auto.paused
+  if (auto.on) auto.paused = true
+  const undo = await props.store.setLevel(n).catch(() => null)
   dragLvl.value = null
-  c.value.mult = n === level.value ? null : strictMult(n)
+  if (undo) toast(`Loot filter: ${LEVEL_NAMES[n]}`, { undo: () => { auto.paused = wasPaused; undo() } })
 }
 // What moving it does, in one line (Guy 2026-11-28).
 const strictLine = computed(() => {
