@@ -11,12 +11,12 @@
 
     <div :class="$style.minBar" data-currency-min>
       <span :class="$style.minLab">Strictness</span>
-      <input type="range" :min="MULT_MIN" :max="MULT_MAX" step="0.05" :value="dragMult ?? mult" :class="$style.range" aria-label="Strictness: every step's price times this"
-        @input="dragMult = Number(($event.target as HTMLInputElement).value)"
-        @change="c.mult = Number(($event.target as HTMLInputElement).value); dragMult = null">
-      <b :class="$style.minVal">×{{ (dragMult ?? mult).toFixed(2) }}</b>
-      <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to ×${strictMult(level).toFixed(2)}, from NeverSink's ${LEVEL_NAMES[level]}`" @click="c.mult = null">Follow {{ LEVEL_NAMES[level] }}</WButton>
-      <span v-else class="w-faint text-xs">follows {{ LEVEL_NAMES[level] }}</span>
+      <input type="range" min="0" max="6" step="1" :value="dragLvl ?? lvlNow" :class="$style.range" aria-label="Strictness" :aria-valuetext="LEVEL_NAMES[dragLvl ?? lvlNow]"
+        @input="dragLvl = Number(($event.target as HTMLInputElement).value)"
+        @change="setLevel(Number(($event.target as HTMLInputElement).value))">
+      <b :class="$style.minVal" data-currency-strict-level>{{ LEVEL_NAMES[dragLvl ?? lvlNow] }}</b>
+      <WButton v-if="c.mult != null" size="sm" variant="ghost" icon="fas fa-undo" :title="`Back to the filter's strictness, ${LEVEL_NAMES[level]} now`" @click="c.mult = null">Default</WButton>
+      <span v-else class="w-faint text-xs">default</span>
       <span v-if="kind === 'uniques'" :class="$style.minLab" data-loot-size-cut title="Big uniques count part of their price: 2x2 75%, 2x3 60%, 2x4 50%. Chase and Always sections skip it.">Size cut
         <StateChip :model-value="c.sizeCut ?? 'auto'" :options="SIZE_CUTS" title="Size cut" dflt="auto" @update:model-value="v => c.sizeCut = v === 'auto' ? undefined : v as 'on' | 'off'" />
         <span class="w-faint text-xs">{{ eff.sizeOn ? 'on now' : 'off now' }}</span></span>
@@ -24,30 +24,19 @@
       <button type="button" :class="$style.hidChip" title="List the items that never show" data-currency-hidden @click="only = 'hidden'">{{ rows.length - shownCount }} of {{ rows.length }} never show</button>
     </div>
 
+    <div class="w-faint text-xs" data-currency-strict-line>{{ strictLine }}</div>
+
     <slot name="extra" />
 
-    <div :class="$style.stepRows" data-currency-all-steps>
-      <span :class="$style.stepRow">
-        <b :class="$style.rowLab" title="Untick a step to hide what lands on it on every Loot page. A page or a section can set its own.">Every page</b>
-        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!allOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} on every page`" @change="toggleAll(s)"> {{ CSTEP_NAMES[s] }}</label>
-      </span>
-      <span :class="$style.stepRow" data-currency-page-steps>
-        <b :class="$style.rowLab" :title="`Every ${KIND_NAME[kind]} section that doesn't set its own`">{{ PAGE_NAME }}</b>
-        <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!pageOff.includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in all ${KIND_NAME[kind]}`" @change="toggleOff(s)"> {{ CSTEP_NAMES[s] }}</label>
-        <span v-if="c.offBy[kind] == null" class="w-faint text-xs">as every page</span>
-        <button v-else type="button" class="w-icon-btn" :title="`${PAGE_NAME} steps back to every page's`" :aria-label="`${PAGE_NAME} steps back to every page's`" @click="setOff(kind, null)"><i class="fas fa-undo" /></button>
-        <span v-if="ownSteps.length" class="w-faint text-xs" :title="ownSteps.join(', ')">· {{ ownSteps.length === 1 ? `${ownSteps[0]} sets its own` : `${ownSteps.length} sections set their own` }}</span>
-      </span>
-    </div>
     <!-- Gold has no price: its page's ruler steps piles by size. -->
     <div v-if="kind === 'gold'" :class="$style.goldRuler">
       <span :class="$style.lookLab">Pile size for each step</span>
       <StepRuler gold :c="c" :eff="eff" cat="gold" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, 'gold')" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="setGold" />
     </div>
     <template v-else>
-    <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span></div>
-    <StepRuler main :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
-      @edit="s => stepEdit = s" @set="setShown" />
+    <div :class="$style.mainLab" data-currency-main-ruler data-currency-all-steps><b>All loot</b><span class="w-faint text-xs">every page and section, unless a section has its own{{ ownCount ? ` · ${ownCount === 1 ? '1 section here has' : `${ownCount} sections here have`} its own` : '' }}</span></div>
+    <StepRuler main toggles :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="allOff" :edit="stepEdit" :samples="stepSample"
+      @edit="s => stepEdit = s" @set="setShown" @toggle="toggleAll" />
     </template>
 
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
@@ -99,7 +88,7 @@
         <span class="flex-1" />
         <span data-loot-section-mode>
           <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)"
-            :bias="c.rulers[g.cat.id] ? undefined : c.nudge[g.cat.id] ?? 0" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
+            :bias="c.rulers[g.cat.id] ? undefined : c.bias[g.cat.id] ?? 100" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setBias(g.cat.id, n)" />
         </span>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
@@ -130,22 +119,22 @@
         <div :class="$style.catLook" data-currency-cat-steps :data-goto-spot="g.cat.id === 'orbs' ? 'section-steps' : undefined">
           <span :class="$style.lookLab" :title="`Untick a step to hide what lands on it, in ${g.cat.name} only`">Steps</span>
           <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!stepsOffIn(c, g.cat.id).includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in ${g.cat.name}`" @change="toggleSecOff(g.cat.id, s)"> {{ CSTEP_NAMES[s] }}</label>
-          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as the page</span>
-          <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to the page's`" :aria-label="`${g.cat.name} steps back to the page's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
+          <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as All loot</span>
+          <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to All loot's`" :aria-label="`${g.cat.name} steps back to All loot's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
         </div>
         <div v-if="g.cat.id !== 'gold'" :class="$style.goldRuler" data-currency-own-ruler :data-goto-spot="g.cat.id === 'orbs' ? 'section-ruler' : undefined">
           <span :class="$style.ownHead">
             <span :class="$style.lookLab">Prices</span>
             <template v-if="c.rulers[g.cat.id]">
               <span class="text-xs">Own ruler, Strictness still moves it</span>
-              <button type="button" class="w-icon-btn" :title="`${g.cat.name} back to the main ruler`" :aria-label="`${g.cat.name} back to the main ruler`" @click="setRuler(g.cat.id, null)"><i class="fas fa-undo" /></button>
+              <button type="button" class="w-icon-btn" :title="`${g.cat.name} back to All loot's ruler`" :aria-label="`${g.cat.name} back to All loot's ruler`" @click="setRuler(g.cat.id, null)"><i class="fas fa-undo" /></button>
             </template>
             <template v-else>
-              <span class="w-faint text-xs">main ruler{{ c.nudge[g.cat.id] ? ', with its Price bias' : '' }}</span>
+              <span class="w-faint text-xs">All loot's ruler{{ c.bias[g.cat.id] ? `, items count at ${c.bias[g.cat.id]}%` : '' }}</span>
               <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give ${g.cat.name} its own ruler, starting where its steps are now`" @click="ownRuler(g.cat.id)">Own ruler</WButton>
             </template>
           </span>
-          <StepRuler v-if="c.rulers[g.cat.id]" :c="c" :eff="eff" :cat="g.cat.id" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, g.cat.id)" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(g.cat.id, i, v)" />
+          <StepRuler v-if="c.rulers[g.cat.id]" toggles :c="c" :eff="eff" :cat="g.cat.id" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, g.cat.id)" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(g.cat.id, i, v)" @toggle="s => toggleSecOff(g.cat.id, s)" />
         </div>
         <template v-for="sg in g.subs" :key="sg.id">
         <div v-if="sg.name" :class="$style.subHead" :data-currency-sub="sg.name">
@@ -210,7 +199,7 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -238,8 +227,8 @@ Only this profile. Your own rules, build rules and presets still win.`
   : `In maps (area level 68+), ${KIND_NAME[props.kind]} show by poe.ninja price, in place of NeverSink's tiers.
 ${props.kind === 'currency' || props.kind === 'fragments' || props.kind === 'cards' ? '- A stack counts at its whole price. Big stacks of cheap items count less.' : ''}
 - Under the **line** it hides. Above it, each step starts at the price you set.
-- Untick a step to hide it: every page, one page or one section.
-- Each section's chip sets **Hide**, **By price** or **Always**, and a **Price bias** on top of **Strictness**.
+- A step's dot on the ruler hides it everywhere. A section can set its own.
+- Each section's chip sets **Hide**, **By price** or **Always**, and a **Price bias**.
 - [[Click]] an item to set its step, price or look by hand.
 - No price: a guess from NeverSink's tier, marked **est.**
 
@@ -349,8 +338,8 @@ const editedCount = computed(() => rows.value.filter(r => r.edited).length)
 const biasedCount = computed(() => rows.value.filter(r => r.bias).length)
 // An item's own Price bias as the Alt+F card words it ("+25%"), or ''.
 function biasText (m: number | undefined) {
-  const p = m == null ? 0 : Math.round((m - 1) * 100)
-  return p === 0 ? '' : `${p > 0 ? '+' : '−'}${Math.abs(p)}%`
+  const p = m == null ? 100 : Math.round(m * 100)
+  return p === 100 ? '' : `${p}%`
 }
 
 const query = ref('')
@@ -437,7 +426,21 @@ const stepEdit = ref<CStep | null>(null) // 0 is Faint
 const level = computed(() => levelOf(props.store.doc.value?.strictness ?? null))
 const mult = computed(() => c.value.mult ?? strictMult(level.value))
 const eff = computed(() => scaled(c.value, props.store.doc.value?.strictness ?? null))
-const dragMult = ref<number | null>(null)
+// Strictness by its level's name (Guy's H1: no multiplier shown): yours, or
+// the nearest level to a multiplier set before the levels.
+const lvlNow = computed(() => c.value.mult == null ? level.value : [0, 1, 2, 3, 4, 5, 6].reduce((a, n) => Math.abs(Math.log(strictMult(n) / c.value.mult!)) < Math.abs(Math.log(strictMult(a) / c.value.mult!)) ? n : a, 0))
+const dragLvl = ref<number | null>(null)
+function setLevel (n: number) {
+  dragLvl.value = null
+  c.value.mult = n === level.value ? null : strictMult(n)
+}
+// What moving it does, in one line (Guy 2026-11-28).
+const strictLine = computed(() => {
+  const n = dragLvl.value ?? lvlNow.value
+  const p = Math.round(Math.abs(strictMult(n) - 1) * 100)
+  const at = n === 2 ? 'Semi-strict: every step price as you set it' : `${LEVEL_NAMES[n]}: every step price ${p}% ${n > 2 ? 'higher, so less shows' : 'lower, so more shows'}`
+  return `${at}. It moves all pages and sections together, own rulers too.`
+})
 const SAMPLE_CATS = props.kind === 'gold' ? ['gold'] : props.kind === 'maps' ? ['mapblight', 'mapravaged'] : props.kind === 'jewels' ? ['jewabyss', 'jewplain'] : props.kind === 'league' ? ['lgexped', 'lgheist', 'lgviscera'] : props.kind === 'gems' ? ['gemexc', 'gemawk', 'gemtrans', 'gemsup', 'gemskill'] : props.kind === 'uniques' ? ['uniqplain', 'uniqvar', 'uniqearly', 'uniqboss', 'uniqfoul'] : props.kind === 'cards' ? ['cardcur', 'carduniq', 'cardgem', 'cardgear', 'cardmap'] : props.kind === 'fragments' ? ['invites', 'uber', 'shaper', 'crests', 'emblems'] : ['orbs', 'essences', 'oils', 'fossils', 'catalysts']
 // The colours the step ruler shows.
 const sampleCat = ref(SAMPLE_CATS[0])
@@ -465,7 +468,6 @@ function loudOnly (p: StylePatch): StylePatch {
 }
 // A section's own ruler (Guy's pick A): starts where its steps are now
 // (main ruler × its bias), before Strictness; undo returns to the main one.
-const ownRulers = computed(() => CATS.value.filter(x => c.value.rulers[x.id]).map(x => x.name))
 function setRuler (cat: string, r: number[] | null) {
   const next = Object.fromEntries(Object.entries(c.value.rulers).filter(([k]) => k !== cat))
   if (r) next[cat] = r
@@ -483,30 +485,31 @@ function setOwn (cat: string, i: number, shown: number) {
   setRuler(cat, r)
 }
 
-// Steps off: the ruler's switch is this page's (every section that doesn't
-// set its own); a section's own row is that section's only (Guy 2026-11-28).
+// Steps off (Guy's H1, 2026-11-28): the ruler's dots are All loot's, every
+// page and section; a section's own Steps row is that section's only. No
+// page level: a page's steps saved before go to each of its sections that
+// had none, the first time the page opens.
 const allOff = computed(() => c.value.offBy.all ?? [])
-const pageOff = computed(() => c.value.offBy[props.kind] ?? allOff.value)
-const PAGE_NAME = KIND_NAME[props.kind].replace(/^./, x => x.toUpperCase())
 function toggleAll (s: number) {
   setOff('all', flip(allOff.value, s))
 }
-const ownSteps = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null).map(x => x.name))
+watch(() => c.value.offBy[props.kind], v => {
+  if (!v || CATS.value.some(x => x.id === props.kind)) return
+  const next = Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))
+  if (v.join() !== allOff.value.join()) for (const x of CATS.value) next[x.id] ??= [...v]
+  c.value.offBy = next
+}, { immediate: true })
+const ownCount = computed(() => CATS.value.filter(x => c.value.offBy[x.id] != null || c.value.rulers[x.id]).length)
 const flip = (list: readonly number[], s: number) => list.includes(s) ? list.filter(x => x !== s) : [...list, s].sort((a, b) => a - b)
 function setOff (key: string, list: number[] | null) {
   const next = Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== key))
   if (list) next[key] = list
   c.value.offBy = next
 }
-// Back to the same steps as every page: follows it again.
-function toggleOff (s: number) {
-  const list = flip(pageOff.value, s)
-  setOff(props.kind, list.join() === allOff.value.join() ? null : list)
-}
-// Back to the same steps as the ruler: follows it again.
+// Back to the same steps as All loot: follows it again.
 function toggleSecOff (cat: string, s: number) {
   const list = flip(stepsOffIn(c.value, cat), s)
-  setOff(cat, list.join() === pageOff.value.join() ? null : list)
+  setOff(cat, list.join() === allOff.value.join() ? null : list)
 }
 function setStepLook (s: number, p: StylePatch | null) {
   const next = Object.fromEntries(Object.entries(c.value.steps).filter(([k]) => k !== String(s)))
@@ -536,10 +539,10 @@ function setCatIcon (id: string, p: { shape?: string, color?: string }) {
 const hexOf = (rgb: number[]) => '#' + rgb.slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('')
 const rgbOf = (hex: string): [number, number, number] => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number]
 
-function setNudge (cat: string, v: number) {
-  const next = Object.fromEntries(Object.entries(c.value.nudge).filter(([k]) => k !== cat))
-  if (v !== 0) next[cat] = v
-  c.value.nudge = next
+function setBias (cat: string, v: number) {
+  const next = Object.fromEntries(Object.entries(c.value.bias).filter(([k]) => k !== cat))
+  if (v !== 100) next[cat] = v
+  c.value.bias = next
 }
 
 // Collecting (Guy's star N): the card shows at least Normal, at any stack.
@@ -579,7 +582,7 @@ const statusText = computed(() => {
 const changed = computed(() => {
   const d = defaultCurrency()
   const mine = (o: Record<string, unknown>) => Object.keys(o).some(k => catIds.value.has(k))
-  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || c.value.offBy[props.kind] != null || mine(c.value.offBy) || mine(c.value.rulers) || c.value.mult != null
+  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.bias) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || mine(c.value.offBy) || mine(c.value.rulers) || c.value.mult != null
 })
 // This class's categories: Defaults leaves the other classes' sections (and
 // the League items' Offs) as they are.
@@ -588,7 +591,7 @@ function reset () {
   const d = defaultCurrency()
   const others = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([k]) => !catIds.value.has(k)))
   // Your item edits are a list you built: Defaults keeps them. The steps are shared by every class.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: others(c.value.nudge), steps: d.steps, cats: others(c.value.cats), offBy: others(Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))), rulers: others(c.value.rulers), mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
+  Object.assign(c.value, { line: d.line, from: d.from, bias: others(c.value.bias), steps: d.steps, cats: others(c.value.cats), offBy: others(c.value.offBy), rulers: others(c.value.rulers), mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
 }
 
 function chaosText (v: number): string {
@@ -645,7 +648,7 @@ function chaosText (v: number): string {
 .range { width: min(22rem, 100%); accent-color: var(--w-accent, #c8a565); }
 .hidChip { font-size: var(--w-fs-xs); color: var(--w-dim); background: var(--w-panel); border: 1px solid var(--w-line); border-radius: 10px; padding: 0 8px; cursor: pointer; white-space: nowrap; }
 .hidChip:hover { color: var(--w-accent, #c8a565); }
-.minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 3.5em; font-variant-numeric: tabular-nums; }
+.minVal { font-size: var(--w-fs-sm); color: var(--w-accent, #c8a565); min-width: 6.5em; font-variant-numeric: tabular-nums; }
 .catSample { display: inline-flex; pointer-events: none; }
 .lookLab { white-space: nowrap; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); }
 .offTog { display: flex; align-items: center; gap: 4px; font-size: var(--w-fs-xs); color: var(--w-muted, #a89a7a); cursor: pointer; }
@@ -653,9 +656,6 @@ function chaosText (v: number): string {
 .stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
 .ownHead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
-.stepRows { display: flex; flex-direction: column; gap: 2px; font-size: var(--w-fs-sm); }
-.stepRow { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; }
-.rowLab { min-width: 6.5rem; }
 .mainLab { display: flex; align-items: baseline; gap: 8px; font-size: var(--w-fs-sm); }
 .goldRuler { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 2px; border-bottom: 1px solid var(--w-line); }
 .catLook { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 2px 4px; border-bottom: 1px solid var(--w-line); }

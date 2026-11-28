@@ -35,6 +35,7 @@ export const GOTO_SPOTS = {
 export const NEWS_SPOTS: Record<string, string> = {
   'loot-filter-section-ruler': 'section-ruler',
   'loot-filter-section-steps': 'section-steps',
+  'loot-filter-bias-percent': 'section-steps',
   'loot-filter-league-always': 'league-always',
   'loot-filter-map-looks': 'map-looks',
   'listed-still-cheapest': 'still-cheapest',
