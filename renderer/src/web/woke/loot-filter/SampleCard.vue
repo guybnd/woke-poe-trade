@@ -18,6 +18,8 @@
       </WBanner>
     </template>
 
+    <!-- The first Alt+F's three cards (filter-tour.ts, Guy's F1). -->
+    <TourCard v-if="altfTour" :steps="ALTF_TOUR_STEPS" :tour="ALTF_TOUR" label="Alt+F tour" :scope="`#widget-${config.wmId} `" need-first data-altf-tour @end="altfTour = false" />
     <div :class="$style.body">
       <div class="flex items-center gap-2">
         <span :class="$style.itemName" class="w-trunc grow" data-no-item-tip="the item the player is checking, which they are hovering in game">{{ facts.name || facts.baseType }}</span>
@@ -186,7 +188,7 @@
         </span>
         <!-- Go to rule opens the editor, and Save + reload reloads (Guy's M4). -->
         <WButton v-if="!canGoTo" size="sm" variant="ghost" @click="emit('open-editor')">Open editor</WButton>
-        <WButton size="sm" variant="primary" :disabled="store.saving.value" @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
+        <WButton size="sm" variant="primary" :disabled="store.saving.value" data-filter-card-save @click="store.save({ reloadNow: true })">{{ config.reloadViaChat ? 'Save + reload' : 'Save' }}</WButton>
       </div>
     </template>
   </WPanel>
@@ -199,6 +201,8 @@ import { CSTEP_NAMES, CURRENCY_TYPE } from './currency-settings'
 import { useFold } from '../ui/fold'
 import WFoldHead from '../ui/WFoldHead.vue'
 import { useWindowKeys } from '../ui/window-keys'
+import { hintsOff, isHintDone } from '../shared/hints'
+import { ALTF_TOUR, ALTF_TOUR_STEPS } from './filter-tour'
 import { WPanel, WBanner, WButton, WSegmented, WChip, openMenu, toast } from '../ui'
 import TierItemChips from './TierItemChips.vue'
 import { basePrice } from './economy'
@@ -292,6 +296,9 @@ const isOwn = computed(() => final.value.type === OWN_RULE_TYPE)
 // Currency weights decides this item: its own card (Guy's picks B, S, W1).
 const isCurrency = computed(() => props.match.final?.block.type === CURRENCY_TYPE)
 const CurrencyCard = defineAsyncComponent(() => import('./CurrencyCard.vue'))
+const TourCard = defineAsyncComponent(() => import('../shared/TourCard.vue'))
+// The first Alt+F's cards (Guy's F1): once, then never again.
+const altfTour = ref(!hintsOff() && !isHintDone(ALTF_TOUR))
 const base = computed(() => props.facts.baseType ?? '')
 
 // The NeverSink rule behind an own rule, so moves and tier edits still work.

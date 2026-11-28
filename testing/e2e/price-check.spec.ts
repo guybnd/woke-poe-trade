@@ -511,7 +511,7 @@ test('the 3rd price check shows a short tour once, and the mod tip waits for it'
   await expect(tour).toContainText('Ctrl')
   await expect(panel.locator('[data-tip-line]')).toHaveCount(0)
   await overlay.snap('price check tour, mods')
-  await tour.locator('[data-pc-tour-next]').click()
+  await tour.locator('[data-tour-next]').click()
   await expect(tour).toHaveAttribute('data-step', 'listing')
   await expect(tour).toBeVisible()
   await expect(tour).toContainText('Highlighted prices')
@@ -521,8 +521,8 @@ test('the 3rd price check shows a short tour once, and the mod tip waits for it'
   const head = (await panel.locator('.w-pc-table thead').boundingBox())!
   await expect.poll(async () => { const b = (await tour.boundingBox())!; return b.y + b.height }).toBeLessThanOrEqual(head.y + 1)
   await overlay.snap('price check tour, listings')
-  await expect(tour.locator('[data-pc-tour-next]')).toHaveCount(0)
-  await tour.locator('[data-pc-tour-done]').click()
+  await expect(tour.locator('[data-tour-next]')).toHaveCount(0)
+  await tour.locator('[data-tour-done]').click()
   await expect(tour).toHaveCount(0)
   await expect(panel.locator('[data-tip-line]')).toBeVisible()
   // Once only.

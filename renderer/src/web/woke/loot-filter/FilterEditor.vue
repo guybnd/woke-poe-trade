@@ -3,6 +3,9 @@
     :busy="store.loading.value && !!store.doc.value" :hotkey="config.editorHotkey ?? undefined">
     <template #actions>
       <ProfileSwitcher :config="config" :store="store" />
+      <!-- How the filter works (Guy's pick C): lit until first opened. -->
+      <button v-if="ours && store.doc.value" type="button" :class="[$style.helpBtn, { [$style.helpLit]: helpLit }]" :aria-pressed="helpOpen" title="How the filter works"
+        aria-label="How the filter works" :data-lit="helpLit ? '' : undefined" data-filter-help-btn data-goto-spot="filter-help" @click="toggleHelp">?</button>
     </template>
     <template #tabs>
       <WTabs v-model="tab" :options="tabOptions" data-goto-spot="editor-tabs" />
@@ -344,6 +347,11 @@
         @drop-pick="key => previewPicks = previewPicks.filter(p => p.key !== key)" />
     </KeepAlive>
 
+    <!-- The tutorial (filter-tour.ts): the first-open tour, and the ? page. -->
+    <TourCard v-if="tourOn" :key="tourRun" :steps="FILTER_TOUR_STEPS" :tour="FILTER_TOUR" label="Loot filter tour" :scope="`#widget-${config.wmId} `"
+      :replay="tourReplay" spot need-first data-filter-tour @end="endTour" />
+    <FilterHelp v-if="helpOpen" :config="config" :top="headHeight" @close="helpOpen = false" @replay="replayTour" @show="showMe" />
+
     <template #footer>
       <!-- Unsaved (as on the Atlas tree): a gold frame, a stamp and a bigger
            Save, because changes do nothing in game until they're saved. -->
@@ -389,6 +397,13 @@ import { TURN_OFF_IDS } from './notices'
 // The Loot tab loads when opened: the price check's score card shares this
 // chunk, and the Loot tab's pages and grounds would ride along into memory.
 const LootTab = defineAsyncComponent(() => import('./LootTab.vue'))
+// The tutorial loads when it shows.
+const TourCard = defineAsyncComponent(() => import('../shared/TourCard.vue'))
+const FilterHelp = defineAsyncComponent(() => import('./FilterHelp.vue'))
+import { FILTER_HELP, FILTER_TOUR, FILTER_TOUR_STEPS, SAMPLE_ITEM } from './filter-tour'
+import type { HelpTile } from './filter-tour'
+import { hintsOff, isHintDone, overlayOpen, retireHint } from '../shared/hints'
+import { allOpen } from './all-open'
 import { WEIGHT_TYPE } from './weights'
 import { gearRanksAsk, takeRanksAsk } from './gear-drag'
 import { GEAR_TYPE } from './gear'
@@ -1434,6 +1449,51 @@ function toggleGroup () {
 
 const panel = ref<InstanceType<typeof WPanel> | null>(null)
 
+// ---- the tutorial (filter-tour.ts) ----
+// The tour runs the first time the window shows our own filter; Replay tour
+// on the ? page runs it again.
+const tourRun = ref(0)
+const tourReplay = ref(false)
+const helpOpen = ref(false)
+// Read once a run: the last card retires it, and stays up until closed.
+const tourWanted = ref(!isHintDone(FILTER_TOUR))
+const tourOn = computed(() => tourWanted.value && overlayOpen.value && ours.value && !!props.store.doc.value && props.config.wmWants === 'show' && !helpOpen.value &&
+  (tourReplay.value || !hintsOff()))
+watch(() => props.config.wmWants, (w) => {
+  if (w === 'show') return
+  tourReplay.value = false
+  tourWanted.value = !isHintDone(FILTER_TOUR)
+})
+function endTour () {
+  tourReplay.value = false
+  tourWanted.value = false
+}
+const helpLit = computed(() => !helpOpen.value && !hintsOff() && !isHintDone(FILTER_HELP))
+const headHeight = ref(32)
+function toggleHelp () {
+  if (helpOpen.value) { helpOpen.value = false; return }
+  headHeight.value = panel.value?.el?.querySelector<HTMLElement>('[data-widget-drag]')?.offsetHeight ?? 32
+  helpOpen.value = true
+  retireHint(FILTER_HELP)
+}
+function replayTour () {
+  helpOpen.value = false
+  tab.value = 'currency'
+  tourReplay.value = true
+  tourWanted.value = true
+  tourRun.value++
+}
+// Show me: to the tab, then the part scrolled to and flashed (What's new's
+// flash). Alt+F's opens the Alt+F card on a sample Chaos Orb.
+function showMe (t: HelpTile) {
+  helpOpen.value = false
+  if ('sample' in t.show) { emit('paste-item', SAMPLE_ITEM); return }
+  const at = t.show
+  tab.value = at.tab
+  if (at.open) allOpen.value = true
+  import('../tab-bar/goto-flash').then(m => { m.flashAt(`#widget-${props.config.wmId} ${at.at}`, `loot filter help: ${t.id}`) }).catch(() => {})
+}
+
 // No "are you sure": drop now, offer Undo (P9).
 function removeEdit (e: FilterEdit) {
   const undo = props.store.removeEdit(e.id)
@@ -1513,6 +1573,20 @@ function openFolder () {
 </script>
 
 <style module>
+.helpBtn {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--w-line-strong);
+  border-radius: var(--w-r-sm);
+  color: var(--w-dim);
+  font-weight: 600;
+  font-size: var(--w-fs-xs);
+  line-height: 1;
+}
+.helpBtn:hover, .helpBtn[aria-pressed='true'] { color: var(--w-fg); border-color: var(--w-accent); }
+.helpLit { color: var(--w-accent); border-color: var(--w-accent); box-shadow: 0 0 0 2px var(--w-accent-soft); }
 .rulesPage {
   display: flex;
   flex-direction: column;
