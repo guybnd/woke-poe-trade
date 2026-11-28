@@ -367,7 +367,7 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
     for (const g of gems) {
       const band = gemBand(g.variant)
       if (g.thin || !band || !(g.chaos > 0)) continue
-      solidBands.set(g.name, [...(solidBands.get(g.name) ?? []), { band, chaos: g.chaos }])
+      pushTo(solidBands, g.name, { band, chaos: g.chaos })
     }
     const thinCap = (g: GemLine, b: GemBand): number | null => {
       const better = (solidBands.get(g.name) ?? []).filter(x => x.band.level >= b.level && x.band.quality >= b.quality && x.band.corrupted === b.corrupted)
@@ -790,6 +790,13 @@ export function stepOfPile (stacks: ReadonlyArray<number | null>, stack: number,
   return 0
 }
 
+// Adds to a map of lists in place (copying the list on every add made big
+// lists quadratic: thousands of gems in one category).
+function pushTo<K, V> (m: Map<K, V[]>, k: K, v: V): void {
+  const list = m.get(k)
+  if (list) list.push(v)
+  else m.set(k, [v])
+}
 const a = (key: string, ...args: Array<string | number>): FilterAction => ({ key, args: args.map(String) })
 const c = (key: string, op: string, values: Array<string | number>): FilterCondition => ({ key, op, count: null, values: values.map(String) } as FilterCondition)
 
@@ -1103,7 +1110,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
     const byConds = new Map<string, CurrencyItem[]>()
     for (const it of forced) {
       const k = it.conds ? JSON.stringify(it.conds) : ''
-      byConds.set(k, [...(byConds.get(k) ?? []), it])
+      pushTo(byConds, k, it)
     }
     for (const list of byConds.values()) blocks.push(block(0, [...area, ...clsCond(list), ...btCond(list), ...(list[0].conds ?? [])], 'off, set by hand'))
   }
@@ -1119,7 +1126,7 @@ export function compileCurrency (cfg: CurrencySettings, items: CurrencyItem[], o
   }
   if (opts.faint) {
     const byCat = new Map<string, CurrencyItem[]>()
-    for (const it of items) if (!forcedHidden(it, cfg)) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
+    for (const it of items) if (!forcedHidden(it, cfg)) pushTo(byCat, it.cat, it)
     for (const [cat, list] of byCat) blocks.push(faintBlock([...area, ...clsCond(list), ...btCond(list), ...shared(list)], cat, catColour(cat, cfg).rgb))
   } else if (items.length) blocks.push(block(0, [...area, ...clsCond(items), ...btCond(items), ...shared(items)], 'under the line'))
   for (const f of opts.lvl ?? []) lvFloor(blocks, f, items.filter(it => (!f.names || f.names.has(it.name)) && !forcedHidden(it, cfg)), cfg, clsCond, btCond)
@@ -1176,14 +1183,14 @@ function lvFloor (blocks: FilterBlock[], f: LvFloor, list: CurrencyItem[], cfg: 
     blocks.splice(at, 0, block(step, conds, `levelling: ${note}`, currencyLook(step, cat, cfg)))
   }
   const byCat = new Map<string, CurrencyItem[]>()
-  for (const it of list) byCat.set(it.cat, [...(byCat.get(it.cat) ?? []), it])
+  for (const it of list) pushTo(byCat, it.cat, it)
   for (const [cat, group] of byCat) {
     const base = [...f.conds, ...clsCond(group), ...(f.names ? btCond(group) : [])]
     // Louder piles first, each stack size on its own.
     const sizes = new Map<number, CurrencyItem[]>()
     for (const it of group) {
       const k = f.stack?.get(it.name)
-      if (k && f.step < 5) sizes.set(k, [...(sizes.get(k) ?? []), it])
+      if (k && f.step < 5) pushTo(sizes, k, it)
     }
     for (const [k, l] of [...sizes].sort((x, y) => y[0] - x[0])) put((f.step + 1) as CStep, [...f.conds, ...clsCond(l), ...btCond(l), c('StackSize', '>=', [k])], `${cat}, ${k}+`, cat)
     put(f.step, base, cat, cat)
@@ -1424,7 +1431,7 @@ function applyLeague (doc: FilterDoc, cfg: CurrencySettings, items: CurrencyItem
   if (!items.length) return null
   const rows = items.filter(it => it.conds)
   const lists = new Map<string, CurrencyItem[]>()
-  for (const it of items) if (!it.conds) lists.set(it.cat, [...(lists.get(it.cat) ?? []), it])
+  for (const it of items) if (!it.conds) pushTo(lists, it.cat, it)
   const parts = [...rows.map(it => compileCurrency(cfg, [it], { faint })), ...[...lists.values()].map(l => compileCurrency(cfg, l, { faint }))]
   const blocks = parts.flatMap(x => x.blocks)
   const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
@@ -1456,7 +1463,7 @@ function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: Curren
   const anchor = doc.blocks.find(b => b.type === 'uniques' && b.tier != null && b.tier in SPECIAL_ROLLS)
   if (!anchor) return null
   const byTier = new Map<string, CurrencyItem[]>()
-  for (const it of items) byTier.set(it.tier ?? '', [...(byTier.get(it.tier ?? '') ?? []), it])
+  for (const it of items) pushTo(byTier, it.tier ?? '', it)
   const parts = [...byTier.values()].map(l => compileCurrency(cfg, l, { faint }))
   const blocks = parts.flatMap(x => x.blocks)
   insertBlocks(doc, doc.chunks.indexOf(anchor), blocks)
