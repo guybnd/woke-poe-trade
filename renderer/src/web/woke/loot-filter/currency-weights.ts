@@ -893,7 +893,7 @@ export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb
   cards: { decent: { bg: [120, 200, 255], text: [0, 0, 0] }, big: { bg: [0, 75, 190], text: [255, 255, 255], edge: [205, 235, 255] } },
   fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
   // Maps (Guy's B, 2026-11-28): black on white, edged in the kind's tint
-  // (MAP_STEP below; Tink is red text on white with a red beam).
+  // (mapCard below; Tink is red text on white with a red beam).
   maps: { decent: { bg: [255, 255, 255], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [255, 255, 255] } },
   // Special gear: a green no other class uses.
   special: { decent: { bg: [110, 225, 160], text: [0, 0, 0] }, big: { bg: [10, 95, 55], text: [255, 255, 255], edge: [200, 255, 220] } }
@@ -905,10 +905,16 @@ export const CAT_FILL: Record<string, NonNullable<typeof CLASS_FILL[LootKind]>> 
   gold: { decent: { bg: [255, 215, 90], text: [0, 0, 0] }, big: { bg: [120, 95, 10], text: [255, 255, 255], edge: [255, 240, 190] } }
 }
 const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
-// Maps from Normal to Big: black on light grey, then on white, always edged
-// in the kind's tint, so an 8-mod and an Originator map differ by border,
-// beam and icon (Guy's B). Size, sound and beam make the step louder.
-const MAP_STEP: Partial<Record<CStep, Rgb>> = { 2: [205, 205, 205], 3: [255, 255, 255], 4: [255, 255, 255] }
+// Special maps from Normal to Big (Guy 2026-11-28, "too similar to a normal
+// T16"; pick A): black text on a card filled with the kind's tint, pale on
+// Normal and Decent, full on Big with a white edge. Plain maps stay black on
+// white with a grey edge (map-floor.ts), so the fill alone says "special".
+// Size, sound and beam make the step louder.
+const mapCard = (step: CStep, rgb: number[]): { bg: number[], edge: number[] } | undefined =>
+  step === 2 ? { bg: mixTo(rgb, 255, 0.65), edge: mixTo(rgb, 0, 0.35) }
+    : step === 3 ? { bg: mixTo(rgb, 255, 0.45), edge: mixTo(rgb, 0, 0.45) }
+      : step === 4 ? { bg: rgb, edge: [255, 255, 255] }
+        : undefined
 
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chaseLook'>): { rgb: [number, number, number], color: string, shape: string } {
   const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? SPECIAL_LOOK[cat] ?? CAT_LOOK.other
@@ -938,8 +944,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
     case 4: { const f = fillOf(cat); Object.assign(out, f ? { text: col(f.big.text), border: col(c.cats[cat]?.text ? rgb : f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
-  const mapBg = kindOf(cat) === 'maps' ? MAP_STEP[step] : undefined
-  if (mapBg) Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col(mapBg) })
+  const card = kindOf(cat) === 'maps' ? mapCard(step, rgb) : undefined
+  if (card) Object.assign(out, { text: col([0, 0, 0]), border: col(card.edge), background: col(card.bg) })
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
