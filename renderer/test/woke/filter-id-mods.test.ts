@@ -104,19 +104,53 @@ describe('identified mods', () => {
         const listed = g.levels.flatMap(l => l.names).filter(x => rows.some(y => y[0] === x))
         // Mostly listed mods, so every step gets items.
         const names = [...new Set(Array.from({ length: 1 + Math.floor(r() * MAX_MODS[rarity]) }, () => r() < 0.6 ? listed[Math.floor(r() * listed.length)] : rows[Math.floor(r() * rows.length)][0]))]
-        const facts = { name: row.name, baseType: row.name, itemClass: row.cls, rarity, itemLevel: 84, areaLevel: 83, width: row.width, height: row.height, identified: true, corrupted: false, corruptedMods: 0, mirrored: false, influences: [], socketGroups: [], explicitModNames: names } as unknown as ItemFacts
+        const facts = { name: row.name, baseType: row.name, itemClass: row.cls, rarity, itemLevel: 84, areaLevel: 83, width: row.width, height: row.height, identified: true, corrupted: false, corruptedMods: 0, mirrored: false, influences: [], socketGroups: [], quality: 0, memoryStrands: 0, fractured: false, synthesised: false, fated: false, anyEnchantment: false, crucibleTree: false, exarchTier: 0, eaterTier: 0, explicitModNames: names } as unknown as ItemFacts
         // Its score as the card counts it, the names the rules can't tell apart left out.
         const counted = itemMods(TABLE, row.cls, names, DEFAULT_SEED, w.mult).filter(x => listed.includes(x.name))
         const score = pts(w.mult[rarity === 'Rare' ? 'idr' : 'idm']) + counted.reduce((s, x) => s + x.pts, 0)
         const want = stepOf(Math.pow(2, score / 10) * (1 + 1e-9), w.need, w.loud)
         const res = matchItem(doc, facts)
-        if (rarity === 'Magic' && want === 0) continue
+        // Magic that only its rarity would show is left to its base.
+        if (rarity === 'Magic' && (want === 0 || !counted.some(x => x.pts > 0))) continue
         expect(res.final?.block.type, `${row.cls} ${names.join(', ')}`).toBe(WEIGHT_TYPE)
         expect(res.final?.block.tier, `${rarity} ${row.cls} ${names.join(', ')} ${score} ${res.final?.block.comment} ${JSON.stringify(res.final?.block.conditions.filter(c => c.key === 'HasExplicitMod'))}`).toBe(`s${want}`)
       }
       // The game takes the file.
       const problems = validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)
       expect(problems).toEqual([])
+    }
+  })
+
+  it('an identified item with a mark that counts scores by it, not by its mods', () => {
+    const doc = parseFilter(SEMI)
+    const w = on()
+    const groups = idGroups(TABLE, DEFAULT_SEED, w.mult)
+    const bases = filterBases(doc)
+    applyWeights(doc, w, bases, groups)
+    const row = bases.find(b => b.cls === 'Body Armours' && b.rank === 'r0' && b.width === 2 && !b.old)!
+    const facts = (extra: object) => ({ name: row.name, baseType: row.name, itemClass: 'Body Armours', rarity: 'Rare', itemLevel: 84, areaLevel: 83, width: row.width, height: row.height, identified: true, corrupted: false, corruptedMods: 0, mirrored: false, influences: [], socketGroups: [], quality: 0, memoryStrands: 0, fractured: false, synthesised: false, fated: false, anyEnchantment: false, crucibleTree: false, exarchTier: 0, eaterTier: 0, explicitModNames: ['of the Genius'], ...extra }) as unknown as ItemFacts
+    // Plain mods, no mark: hidden.
+    expect(matchItem(doc, facts({})).visibility).toBe('Hide')
+    // A 6-link (×32) shows.
+    const six = matchItem(doc, facts({ socketGroups: ['RRRRRR'] }))
+    expect(six.final?.block.type).toBe(WEIGHT_TYPE)
+    expect(six.visibility).toBe('Show')
+    // Each mark scores it as an unidentified tier 1 one would.
+    const unid = (extra: object) => facts({ identified: false, unidentifiedItemTier: 1, explicitModNames: [], ...extra })
+    for (const extra of [{ socketGroups: ['RRRRRR'] }, { socketGroups: ['RRRRR'] }, { fractured: true }, { influences: ['shaper'] }, { quality: 28 }, { synthesised: true }]) {
+      const a = matchItem(doc, facts(extra))
+      const b = matchItem(doc, unid(extra))
+      expect(a.visibility, JSON.stringify(extra)).toBe(b.visibility)
+      expect(a.final?.block.tier, JSON.stringify(extra)).toBe(b.final?.block.tier)
+    }
+  })
+
+  it('magic its rarity alone would show is left to its base', () => {
+    const doc = parseFilter(SEMI)
+    const w = on(x => { x.need = 0.5 })
+    const compiled = applyWeights(doc, w, filterBases(doc), idGroups(TABLE, DEFAULT_SEED, w.mult))!
+    for (const b of compiled.blocks.filter(x => /identified magic/.test(x.comment ?? ''))) {
+      expect(b.conditions.some(c => c.key === 'HasExplicitMod')).toBe(true)
     }
   })
 

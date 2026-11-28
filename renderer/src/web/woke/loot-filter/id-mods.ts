@@ -81,15 +81,15 @@ export function itemMods (table: AffixTable, cls: string, names: readonly string
 // points a name can bring, best first, with the names worth exactly that.
 export interface IdGroup { classes: string[], levels: Array<{ pts: number, names: string[] }> }
 
-const round = (p: number) => Math.round(p * 100) / 100
-
 export function idGroups (table: AffixTable, seed: readonly string[], mult: Record<WeightKey, number>): IdGroup[] {
   // Each class: every name it can roll and its points (0 for most).
   const maps = Object.entries(table.classes).map(([cls, rows]) => {
     const m = new Map<string, number>()
     for (const [name, ti, tier] of rows) {
       const key = modKey(table.texts[ti] ?? '', tier, seed)
-      m.set(name, Math.max(m.get(name) ?? 0, key ? round(points(mult[key])) : 0))
+      // A name twice (two kinds share it): the lower, so it never counts high.
+      const p = key ? points(mult[key]) : 0
+      m.set(name, m.has(name) ? Math.min(m.get(name)!, p) : p)
     }
     return { classes: [cls], m }
   })

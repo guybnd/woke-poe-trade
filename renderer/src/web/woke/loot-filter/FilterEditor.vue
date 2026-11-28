@@ -1097,6 +1097,12 @@ watch(tab, t => { if (focusTab && t !== focusTab) { focusTab = null; tabFocus.va
 
 watch(() => props.openTab, (t) => {
   if (!t) return
+  if (t.tab === 'weights') {
+    // Rare gear (What's new "Show me"), whichever Equipment section was open.
+    if (equipShown.value) { tabFocus.value = 'rares'; tab.value = 'weights'; nextTick(() => { tabFocus.value = null }).catch(() => {}) }
+    emit('tab-opened')
+    return
+  }
   tab.value = t.tab
   // Once: the editor is rebuilt each time it opens, and must not come back here.
   emit('tab-opened')

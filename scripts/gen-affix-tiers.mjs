@@ -134,9 +134,10 @@ export function buildTable (mods, bases, statTranslations) {
         const tier = levels.indexOf(Number(m.required_level) || 0) + 1
         const name = m.name.trim()
         const row = [name, textId(text), tier]
-        // A name twice on one class (two kinds share it): its best tier.
+        // A name twice on one class (two kinds share it): its worst tier,
+        // so the filter never counts it higher than it can be.
         const had = rows.get(name)
-        if (!had || had[2] > tier) rows.set(name, row)
+        if (!had || had[2] < tier) rows.set(name, row)
       }
     }
     classes[cls] = [...rows.values()].sort((a, b) => a[0].localeCompare(b[0]))

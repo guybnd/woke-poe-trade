@@ -149,7 +149,7 @@ interface View { id?: boolean, pts: number, line: number, loud: number[], step: 
 const idItem = computed(() => {
   const f = props.facts
   if (!w.value.on || !f.identified || (f.itemLevel ?? 0) < 68 || !f.itemClass || !GEAR_CLASSES.includes(f.itemClass)) return null
-  if (f.rarity === 'Rare') return 'Rare' as const
+  if (f.rarity === 'Rare') return got.value ? null : 'Rare' as const
   // Magic decided by its mods (it may go on to its base's rule instead).
   return f.rarity === 'Magic' && /: identified magic/.test(props.match.final?.block.comment ?? '') ? 'Magic' as const : null
 })

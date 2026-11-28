@@ -234,6 +234,39 @@ const MARKS: Mark[] = [
 ]
 export const MARK_KEYS: ReadonlySet<WeightKey> = new Set(MARKS.map(x => x.key))
 
+// "Hasn't this mark", for the marks a rule can say that of (identified gear
+// with one scores by it, not by its mods). Abyss and R-G-B sockets can't be.
+const MARK_NOT: Partial<Record<WeightKey, FilterCondition[]>> = {
+  l6: [c('LinkedSockets', '<', [6])],
+  l5: [c('LinkedSockets', '<', [5])],
+  l4: [c('LinkedSockets', '<', [4])],
+  infl: [c('HasInfluence', '', ['None'])],
+  eld: [c('HasSearingExarchImplicit', '<', [1]), c('HasEaterOfWorldsImplicit', '<', [1])],
+  qual: [c('Quality', '<', [24])],
+  fract: [F('FracturedItem')],
+  synth: [F('SynthesisedItem')],
+  fated: [F('Fated')],
+  ench: [F('AnyEnchantment')],
+  strand: [c('MemoryStrands', '<', [70])],
+  cruc: [F('HasCruciblePassiveTree')]
+}
+// The conditions an identified item without any mark that counts meets.
+// (Links: the fewest that count, so a 6-link isn't scored by mods when only
+// 4-links count... it goes to the mark rules, which leave it at its base.)
+export function idUnmarked (m: Record<WeightKey, number>): FilterCondition[] {
+  const up = upMarks(m).filter(k => MARK_NOT[k])
+  const links = (['l4', 'l5', 'l6'] as WeightKey[]).find(k => up.includes(k))
+  return [...(links ? MARK_NOT[links]! : []), ...up.filter(k => !k.startsWith('l')).flatMap(k => MARK_NOT[k]!)]
+}
+// Whether this identified item scores by a mark instead of its mods.
+export function idMarked (it: WeightItem, m: Record<WeightKey, number>): boolean {
+  const up = upMarks(m).filter(k => MARK_NOT[k])
+  const has = termsOf(it)
+  const links = (['l4', 'l5', 'l6'] as WeightKey[]).find(k => up.includes(k))
+  if (links && it.links >= Number(links.slice(1))) return true
+  return up.some(k => !k.startsWith('l') && has.includes(k))
+}
+
 // ---- Look channels: border, background, text colour ----------------------
 // Each channel is a ranked list (settings.look): the first thing on it an
 // item has paints that channel. Steps set loudness only. Written as Continue
@@ -404,7 +437,7 @@ function pinConds (k: WeightKey, bases: BaseRow[]): FilterCondition[][] {
 const RARE_TIERS: readonly WeightKey[] = ['t5', 't4', 't3', 't2', 't1']
 const MAGIC_TIERS: readonly WeightKey[] = ['mt5', 'mt4', 'mt3', 'mt2', 'mt1']
 
-interface Split { parts: Array<{ conds: FilterCondition[], factor: number, note: string, tiers?: readonly WeightKey[] }>, rest?: boolean }
+interface Split { parts: Array<{ conds: FilterCondition[], factor: number, note: string, tiers?: readonly WeightKey[], noTier?: boolean }>, rest?: boolean }
 
 function splits (bases: BaseRow[], m: Record<WeightKey, number>): Split[] {
   const own = (keys: WeightKey[]) => keys.reduce((p, k) => p * m[k], 1)
@@ -527,17 +560,20 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
   const ILVL: Array<[number, WeightKey]> = [[86, 'i86'], [83, 'i83'], [75, 'i75'], [68, 'i68']]
   // Drop tier and item level, for one rarity's tier rows (best first).
   // On white and magic gear ilvl 86 also counts the crafting-base row.
-  const dimsFor = (tiers: readonly WeightKey[]) => {
+  // Identified items have no drop tier (counted as tier 1).
+  const dimsFor = (tiers: readonly WeightKey[], noTier = false) => {
     const craft = tiers === MAGIC_TIERS ? m.w86 : 1
     const opts: Option[][] = [
-      cumulative(tiers.map(t => m[t]), k => [c('UnidentifiedItemTier', '>=', [5 - k])]),
+      ...(noTier ? [] : [cumulative(tiers.map(t => m[t]), k => [c('UnidentifiedItemTier', '>=', [5 - k])])]),
       cumulative(ILVL.map(x => m[x[1]] * (x[1] === 'i86' ? craft : 1)), k => [c('ItemLevel', '>=', [ILVL[k][0]])])
     ]
+    // No drop tier counts as tier 1.
+    const t1 = noTier ? m[tiers[tiers.length - 1]] : 1
     const full = opts.map(o => o[o.length - 1].mask)
     const lo: number[] = []
     const hi: number[] = []
-    lo[opts.length] = 1
-    hi[opts.length] = 1
+    lo[opts.length] = t1
+    hi[opts.length] = t1
     for (let i = opts.length - 1; i >= 0; i--) {
       const fs = opts[i].map(o => o.factor)
       lo[i] = lo[i + 1] * Math.min(...fs)
@@ -684,7 +720,10 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
   // Identified gear: its mods' points over the rarity's own, loudest step
   // first. A rare that reaches no step hides with the rest at the end; magic
   // goes on to the base rules below (its base can still make it worth it).
+  // An item with a mark that counts (6-link, influence, fractured...) skips
+  // these and scores like an unidentified one, so its mark is never lost.
   const ptsOf = (x: number) => x > 0 ? 10 * Math.log2(x) : -Infinity
+  const unmarked = idUnmarked(m)
   for (const g of ids) {
     const levels = g.levels.map(l => l.pts)
     for (const rarity of ['Rare', 'Magic'] as IdRarity[]) {
@@ -692,10 +731,13 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
       for (const step of [4, 3, 2, 1] as Step[]) {
         const at = atOf(step)
         if (step < 4 && at === atOf((step + 1) as Step)) continue
-        const need = ptsOf(at) - own
+        // Magic needs one counted mod at least (its rarity alone is its base's call).
+        const need = rarity === 'Magic' ? Math.max(ptsOf(at) - own, 1e-3) : ptsOf(at) - own
         for (const counts of minimalCounts(levels, need, MAX_MODS[rarity])) {
           const n = counts[counts.length - 1]
-          emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...countConds(g, counts)], step, `identified ${rarity.toLowerCase()}, ${n} mod${n === 1 ? '' : 's'}`)
+          // Magic its rarity alone shows is left to its base's rules.
+          if (rarity === 'Magic' && !n) continue
+          emit([c('Rarity', '', [rarity]), T('Identified'), c('Class', '==', g.classes), ...unmarked, ...(rarity === 'Magic' && m.w86 > 1 ? [c('ItemLevel', '<', [86])] : []), ...countConds(g, counts)], step, `identified ${rarity.toLowerCase()}, ${n} mod${n === 1 ? '' : 's'}`)
         }
       }
     }
@@ -716,7 +758,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
     const rest = sp.parts[sp.parts.length - 1].factor
     sp.parts.forEach((p, k) => {
       const pre = [...prefix, ...p.conds]
-      walkSplits(list, i + 1, pre, start * p.factor, [...notes, p.note], p.tiers ? dimsFor(p.tiers) : dims)
+      walkSplits(list, i + 1, pre, start * p.factor, [...notes, p.note], p.tiers ? dimsFor(p.tiers, p.noTier) : dims)
       // A part before a "rest" that's lighter than the rest hides what it
       // didn't show, so the rest doesn't count it heavier than it is.
       if (sp.rest && k < sp.parts.length - 1 && p.factor < rest) hide(pre, [...notes, p.note].filter(Boolean).join(', '))
@@ -727,6 +769,14 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[], ids: IdGrou
   const ups = MARKS.filter(x => up.includes(x.key)).sort((p, q) => m[q.key] - m[p.key])
   for (const x of ups) {
     walkSplits([ss[0], ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
+  }
+  // Identified rares with a mark: as unidentified ones (no drop tier).
+  if (ids.length) {
+    const idRare: Split = { parts: [{ conds: [c('Rarity', '', ['Rare']), T('Identified')], factor: m.wr, note: 'identified', tiers: RARE_TIERS, noTier: true }] }
+    for (const x of ups) {
+      if (!MARK_NOT[x.key]) continue
+      walkSplits([idRare, ...ss.slice(3)], 0, [...x.yes, F('Corrupted'), F('Mirrored')], m[x.key], [WEIGHT_LABEL[x.key].toLowerCase()])
+    }
   }
   walkSplits(ss, 0, [], 1, [])
   for (const scope of SCOPES(ids.length > 0)) hide(scope, 'the rest')
