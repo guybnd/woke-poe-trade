@@ -5,10 +5,10 @@
        Price bias slider (Penalty / none / Bonus) applied on release. -->
   <span :class="$style.wrap" @click.stop @keydown.stop>
     <button ref="btn" type="button" :class="[$style.chip, { [$style.moved]: moved }]" class="w-focusable"
-      :aria-label="`${title}: ${cur?.label ?? ''}${biasText ? `, price bias ${biasText}` : ''}`" aria-haspopup="menu" :aria-expanded="open"
+      :aria-label="`${title}: ${shownAs ?? cur?.label ?? ''}${biasText ? `, price bias ${biasText}` : ''}`" aria-haspopup="menu" :aria-expanded="open"
       @click="toggle">
       <i :class="$style.dot" :style="dotStyle(cur)" aria-hidden="true" />
-      <span :class="$style.word">{{ cur?.label }}</span>
+      <span :class="$style.word">{{ shownAs ?? cur?.label }}</span>
       <span v-if="biasText" :class="$style.bias">· {{ biasText }}</span>
       <i class="fas fa-caret-down" :class="$style.car" aria-hidden="true" />
     </button>
@@ -54,6 +54,9 @@ const props = defineProps<{
   bias?: number
   // The mode the bias does nothing in (Hide); it counts in every other.
   noBiasIn?: string
+  // Shown in place of the state's word when the rows below differ from it
+  // (Mixed, Always): the menu still sets the section's own state.
+  shownAs?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [v: string], 'update:bias': [n: number] }>()
 

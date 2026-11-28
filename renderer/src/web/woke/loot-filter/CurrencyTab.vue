@@ -98,7 +98,7 @@
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span data-loot-section-mode>
-          <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)"
+          <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)" :shown-as="mixOf(g)"
             :bias="c.rulers[g.cat.id] ? undefined : c.nudge[g.cat.id] ?? 0" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
         </span>
       </div>
@@ -561,6 +561,12 @@ function toggleOn (name: string) {
 // A row with a set look and no price (jewels): Always shows it at that look,
 // By price puts it on the price ladder, Off hides it. A click moves along.
 type RowMode = 'always' | 'price' | 'off'
+// A section of such rows on By price whose rows say otherwise: its chip reads
+// Always (every row Always) or Mixed, so the header matches the rows.
+function mixOf (g: { cat: { id: string }, all: number, always: number }): string | undefined {
+  if (!g.always || sectionMode(c.value, g.cat.id) !== 'auto') return undefined
+  return g.always === g.all ? 'Always' : 'Mixed'
+}
 const ROW_MODE_TEXT: Record<RowMode, string> = { always: 'Always', price: 'By price', off: 'Off' }
 const ROW_MODE_TIP: Record<RowMode, string> = {
   always: 'Always shows, at the look beside it. Click for By price',
