@@ -1,0 +1,47 @@
+name: NeverSink watch
+
+# We don't use NeverSink's filter any more, but his releases still tell us
+# about new bases, retiered items and new rules (Guy 2026-11-28: follow him,
+# never auto-apply, internal only). Every Tuesday, or by hand: when his
+# latest release has no issue yet, compare it with the release before and
+# open an issue with what changed (scripts/neversink-watch.mjs). Nothing here
+# changes our filter.
+on:
+  schedule:
+    - cron: '23 6 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: neversink-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+    - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      with:
+        node-version: 22
+    - name: Compare his last two releases
+      id: diff
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPORT: ${{ runner.temp }}/neversink.md
+      run: node scripts/neversink-watch.mjs
+    - name: Open an issue for a release we haven't seen
+      env:
+        GH_TOKEN: ${{ github.token }}
+        TAG: ${{ steps.diff.outputs.tag }}
+        REPORT: ${{ runner.temp }}/neversink.md
+      run: |
+        title="NeverSink $TAG: what changed upstream"
+        if gh issue list --state all --search "\"$title\" in:title" --json title --jq '.[].title' | grep -Fxq "$title"; then
+          echo "Already have: $title"; exit 0
+        fi
+        gh issue create --title "$title" --body-file "$REPORT"

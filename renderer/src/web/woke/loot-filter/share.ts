@@ -7,12 +7,22 @@ import type { OwnRule } from './rules'
 import { conditionKind } from './rules'
 import type { Presets } from './presets'
 import { normalizePresets } from './presets'
+import type { SharePart } from './share-parts'
+import { isSharePart } from './share-parts'
 
 export interface SharedChanges {
   edits: FilterEdit[]
   rules: OwnRule[]
   presets: Presets
   locks: string[]
+  // The parts this code holds (share-parts.ts); unset: all of them (codes
+  // from before parts, and whole profiles).
+  parts?: SharePart[]
+  // The profile it came from, as the name for a new one.
+  name?: string
+  // Each item setting's Loot section as the sharer's filter had it, so the
+  // pages split the same way whatever prices the importer has loaded.
+  itemCats?: Record<string, string>
 }
 
 const PREFIX_DEFLATE = 'WOKEF1.'
@@ -38,7 +48,7 @@ async function pipe (bytes: Uint8Array, stream: CompressionStream | Decompressio
 }
 
 export async function encodeChanges (c: SharedChanges): Promise<string> {
-  const json = new TextEncoder().encode(JSON.stringify({ v: 1, ...c }))
+  const json = new TextEncoder().encode(JSON.stringify({ v: 2, ...c }))
   if (typeof CompressionStream === 'function') {
     return PREFIX_DEFLATE + toB64(await pipe(json, new CompressionStream('deflate-raw')))
   }
@@ -63,11 +73,25 @@ export async function decodeChanges (code: string): Promise<SharedChanges> {
   } catch {
     throw new Error('That code is damaged; copy it again')
   }
-  if (raw?.v !== 1) throw new Error('That code is from a newer version of the toolkit')
+  if (raw?.v !== 1 && raw?.v !== 2) throw new Error('That code is from a newer version of the toolkit')
   const edits = Array.isArray(raw.edits) ? raw.edits.filter(isEdit) : []
   const rules = Array.isArray(raw.rules) ? raw.rules.filter(isRule) : []
   const locks = Array.isArray(raw.locks) ? raw.locks.filter((x): x is string => typeof x === 'string') : []
-  return { edits, rules, presets: normalizePresets(raw.presets as Partial<Presets>), locks }
+  const out: SharedChanges = { edits, rules, presets: normalizePresets(raw.presets as Partial<Presets>), locks }
+  if (Array.isArray(raw.parts)) out.parts = [...new Set(raw.parts.filter(isSharePart))]
+  if (raw.itemCats && typeof raw.itemCats === 'object') {
+    const cats: Record<string, string> = {}
+    for (const [n, c] of Object.entries(raw.itemCats as Record<string, unknown>)) {
+      if (n in out.presets.currency.items && typeof c === 'string' && /^[a-z]{1,20}$/.test(c)) cats[n] = c
+    }
+    out.itemCats = cats
+  }
+  if (typeof raw.name === 'string') {
+    // eslint-disable-next-line no-control-regex
+    const name = raw.name.replace(/[\u0000-\u001f"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40)
+    if (name) out.name = name
+  }
+  return out
 }
 
 // Every string goes into the filter file: no quotes or line breaks, which

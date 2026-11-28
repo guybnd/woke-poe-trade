@@ -8,7 +8,6 @@ import type { GameWindow } from '../windowing/GameWindow'
 import { deleteBuild, duplicateBuild, importBuild, listBuilds, moveBuild, moveBuildFolder, openBuild, readBuild, renameBuild, restoreBuild, saveLiveBuild, showBuild } from './pob-builds'
 import { timelessRewrites } from './pob-timeless'
 import { listFilters, readFilter, writeFilter, showFilterFolder, listSounds, readSound, installSound } from './loot-filter'
-import { readGameSound } from './game-sounds'
 import { cachedNeverSink, downloadNeverSink, latestNeverSink, pruneNeverSink, readNeverSink } from './neversink'
 import { ScreenScanner, MAP_SCAN, ESSENCE_SCAN, ensureOcr, readAllEssenceLabels, readAreaMods } from './map-scan'
 import { WokeHoverTracker } from './hover'
@@ -29,7 +28,7 @@ import { sessionHandlers } from './session-store'
 import { tradeLogHandlers } from './trade-log'
 import { deathRecapHandlers } from './death-recap-store'
 import { docHandlers } from './data-files'
-import { browsePath, pathStat } from './settings-files'
+import { browsePath, openTextFile, pathStat, saveTextFile } from './settings-files'
 import { cachedLiveData, checkLiveData } from './live-data'
 import { initPersonal } from './personal'
 import { guessUnidArt } from './unid-art'
@@ -60,7 +59,6 @@ const handlers: Partial<WokeHandlers> = {
   'filter-sounds': listSounds,
   'filter-sound-read': readSound,
   'filter-sound-install': installSound,
-  'filter-game-sound': readGameSound,
   'ns-latest': async () => await latestNeverSink(),
   'ns-download': downloadNeverSink,
   'ns-read': readNeverSink,
@@ -73,6 +71,8 @@ const handlers: Partial<WokeHandlers> = {
   'live-data-cached': cachedLiveData,
   'live-data-check': async (args) => await checkLiveData(args, async (url, signal) => await net.fetch(url, { signal })),
   'browse-path': browsePath,
+  'text-file-save': saveTextFile,
+  'text-file-open': openTextFile,
   'unid-art-guess': guessUnidArt,
   ...marketHandlers,
   ...sessionHandlers,

@@ -137,8 +137,8 @@ export interface WokeOps {
   'filter-sounds': Op<FilterDir, { files: Array<{ name: string, size: number }> }>
   'filter-sound-read': Op<FilterDir & { name: string }, { data: string, mime: string }>
   'filter-sound-install': Op<FilterDir & { name: string, data: string }, { written: boolean }>
-  // The game's own alert sound (1-16, ShAlchemy...), decoded from the install.
-  'filter-game-sound': Op<{ id: string }, { data: string, mime: string }>
+  // The game's master x item filter volume (0-1), for previews.
+  'filter-sound-gain': Op<NoArgs, { gain: number }>
   'game-filter': Op<NoArgs, { name: string | null, loaded: boolean | null }>
 
   // NeverSink filter downloads
@@ -155,6 +155,9 @@ export interface WokeOps {
   'lab-layout-image': Op<{ url: string }, string | null>
   'path-stat': Op<{ path?: string | null }, WokePathStat>
   'browse-path': Op<{ kind?: 'file' | 'dir', title?: string, defaultPath?: string, extensions?: string[] }, string | null>
+  // A small text file saved where the player picks, or read from one (share codes).
+  'text-file-save': Op<{ name?: string, text?: string, title?: string, extensions?: string[] }, string | null>
+  'text-file-open': Op<{ title?: string, extensions?: string[] }, { path: string, text: string } | null>
   'live-data-cached': Op<{ language: unknown, bundled: number }, number | null>
   'live-data-check': Op<{ language: unknown, bundled: number, bundledShared?: unknown }, number | null>
   'game-log-tail': Op<{ bytes?: number, since?: number } | NoArgs, { path: string | null, lines: string[] }>

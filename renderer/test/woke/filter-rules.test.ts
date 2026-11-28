@@ -320,7 +320,7 @@ describe('share codes', () => {
     await expect(decodeChanges('hello')).rejects.toThrow(/isn't a loot filter changes code/)
     await expect(decodeChanges('WOKEF1.@@@')).rejects.toThrow(/isn't a loot filter changes code/)
     await expect(decodeChanges(`WOKEF0.${btoa('not json')}`)).rejects.toThrow(/damaged/)
-    await expect(decodeChanges(`WOKEF0.${btoa('{"v":2}')}`)).rejects.toThrow(/newer version/)
+    await expect(decodeChanges(`WOKEF0.${btoa('{"v":3}')}`)).rejects.toThrow(/newer version/)
   })
 
   async function coded (edits: unknown[]) {

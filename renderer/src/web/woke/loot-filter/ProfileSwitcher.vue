@@ -15,22 +15,28 @@
       <WButton size="sm" variant="ghost" @click="deleting = null">Cancel</WButton>
     </template>
     <button v-else type="button" class="w-focusable" :class="$style.chip" :disabled="store.switching.value" aria-haspopup="menu"
-      :aria-label="`Profile ${current.name}: switch, add, rename or remove`" :title="tipOf(current)" data-profile-chip @click="profileMenu" @contextmenu.prevent="profileMenu">
+      :aria-label="`Profile ${current.name}: switch, add, rename, share or remove`" :title="tipOf(current)" data-profile-chip @click="profileMenu" @contextmenu.prevent="profileMenu">
       <i v-if="switchingTo != null" class="fas fa-spinner fa-spin" aria-hidden="true" />
       <span class="w-trunc">{{ current.name }}</span>
       <i class="fas fa-caret-down" aria-hidden="true" />
     </button>
+    <div v-if="sharing" :class="$style.pop">
+      <ShareBox :key="`${sharing.mode}-${sharing.id ?? ''}`" :config="config" :store="store" :mode="sharing.mode" :profile-id="sharing.id" :anchor="anchor()" @close="sharing = null" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, defineAsyncComponent, nextTick, ref } from 'vue'
 import { WButton, openMenu, toast } from '../ui'
 import type { LootFilterStore } from './store'
 import type { FilterProfile, LootFilterWidget } from './widget'
 import { PROFILE_NAME_MAX } from './widget'
 import { activeProfile, addProfile, copyName, newProfileName, profileFile, profileNameProblem, renameProfile } from './profiles'
 import { LEVEL_NAMES } from './strictness'
+
+// Loaded when opened: it pulls in the Loot tab's item list.
+const ShareBox = defineAsyncComponent(() => import('./ShareBox.vue'))
 
 const props = defineProps<{
   config: LootFilterWidget
@@ -43,6 +49,7 @@ const naming = ref<{ kind: 'new' | 'copy' | 'rename', id?: number, from?: number
 const draft = ref('')
 const deleting = ref<FilterProfile | null>(null)
 const switchingTo = ref<number | null>(null)
+const sharing = ref<{ mode: 'share' | 'import', id?: number } | null>(null)
 
 const current = computed(() => activeProfile(props.config))
 const byId = (id: number) => props.config.profiles.find(p => p.id === id)
@@ -58,7 +65,7 @@ function sourceOf (p: FilterProfile): string {
 }
 
 function tipOf (p: FilterProfile): string {
-  const lead = p.id === props.config.activeProfile ? 'In use. Click for your other profiles, or to add, rename or remove one.' : 'Switch to it; the game loads it too.'
+  const lead = p.id === props.config.activeProfile ? 'In use. Click for your other profiles, or to add, rename, share or remove one.' : 'Switch to it; the game loads it too.'
   return `${p.name} · ${sourceOf(p)}\nSaves to ${fileOf(p)}\n${lead}`
 }
 
@@ -79,6 +86,8 @@ function profileMenu (e: MouseEvent) {
     { label: 'New profile', icon: 'fas fa-plus', action: () => { startNaming('new') } },
     { label: `Copy of “${me.name}”`, icon: 'far fa-clone', action: () => { startNaming('copy', undefined, me.id) } },
     { label: `Rename “${me.name}”`, icon: 'fas fa-pen', action: () => { startNaming('rename', me.id) } },
+    { label: `Share “${me.name}”…`, icon: 'fas fa-share-alt', action: () => { sharing.value = { mode: 'share', id: me.id } } },
+    { label: 'Import a shared filter…', icon: 'fas fa-file-import', action: () => { sharing.value = { mode: 'import' } } },
     { label: `Remove “${me.name}”`, icon: 'fas fa-trash', danger: true, disabled: props.config.profiles.length < 2, action: () => { deleting.value = me } }
   ])
 }
@@ -148,7 +157,19 @@ async function confirmDelete () {
 </script>
 
 <style module>
-.strip { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.strip { position: relative; display: flex; align-items: center; gap: 4px; min-width: 0; }
+/* The share box opens under the chip, over the editor. */
+.pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  width: 34rem;
+  max-width: 80vw;
+  background: var(--w-panel-solid);
+  border-radius: var(--w-r-md);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.5);
+}
 .chip {
   display: inline-flex;
   align-items: center;
