@@ -83,7 +83,27 @@ const picks = computed(() => {
   return out
 })
 
-const drops = computed(() => picks.value.map(p => {
+// One pile for each step on the ruler (Guy 2026-11-28: "why dont example
+// piles show of all sizes"), so every look lies on the ground, a step turned
+// off struck through. Each is the smallest pile of an item that reaches that
+// step; a step no item reaches has none.
+// One order of the items per pile, from the seed alone, so changing a setting
+// keeps the same examples (only their pile size follows the ruler).
+const exampleOrder = computed(() => {
+  const r = rng(seed.value * 7 + 3)
+  return props.items.map(it => ({ it, k: r() })).sort((x, y) => x.k - y.k).map(x => x.it)
+})
+const examples = computed(() => {
+  const out: Array<{ id: number, it: CurrencyItem, stack: number }> = []
+  const all = exampleOrder.value.map(it => ({ it, stacks: stacksFor(it, props.cfg) }))
+  for (let s = 1; s <= 5; s++) {
+    const c = all.find(c => c.stacks[s - 1] != null && stepOfPile(c.stacks, c.stacks[s - 1]!) === s)
+    if (c) out.push({ id: 1000 + s, it: c.it, stack: c.stacks[s - 1]! })
+  }
+  return out
+})
+
+const drops = computed(() => [...picks.value, ...examples.value].map(p => {
   const stacks = stacksFor(p.it, props.cfg)
   // A pile on a step turned off hides (never Faint).
   const offBand = stepOfPile(stacks, p.stack) !== stepOfPile(stacks, p.stack, offSteps(p.it, props.cfg))
@@ -93,7 +113,7 @@ const drops = computed(() => picks.value.map(p => {
   const look: StylePatch = faint
     ? { ...currencyFullLook(0, p.it.cat, props.cfg), ...faintLook(catColour(p.it.cat, props.cfg).rgb) }
     : { ...currencyFullLook(step, p.it.cat, props.cfg), ...(step > 0 ? own ?? {} : {}) }
-  return { ...p, step, faint, look, label: p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
+  return { ...p, step, faint, look, label: p.it.type === 'gold' && p.stack > 1 ? `${p.stack} ${p.it.name}` : p.stack > 1 ? `${p.stack}x ${p.it.name}` : p.it.name }
 }))
 const hiddenCount = computed(() => drops.value.filter(d => d.step === 0 && !d.faint).length)
 
