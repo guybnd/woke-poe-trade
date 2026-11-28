@@ -108,7 +108,10 @@ export type UniqueRule = 'max' | 'min'
 // be any of them, so it's judged by the best.
 //  - 'market': the best with a real market, for moving tiers.
 //  - 'safety': the best of all, for never hiding what might be worth it.
-type VariantRule = 'market' | 'safety'
+//  - 'drop': the cheapest with a real market, for what a drop is likely
+//    worth (Guy 2026-11-28: a 1-passive Voices at 1,200 div priced every
+//    Large Cluster Jewel unique).
+type VariantRule = 'market' | 'safety' | 'drop'
 
 // `all`: the best line even when a plain one exists (a special roll).
 function priceFinder (items: PriceItem[], rule: VariantRule = 'market', links = false, all = false) {
@@ -122,7 +125,7 @@ function priceFinder (items: PriceItem[], rule: VariantRule = 'market', links = 
       else byName.set(key, [i])
     }
   }
-  const best = (list: PriceItem[]) => list.reduce((a, b) => b.chaos > a.chaos ? b : a)
+  const best = (list: PriceItem[]) => list.reduce((a, b) => (rule === 'drop' ? b.chaos < a.chaos : b.chaos > a.chaos) ? b : a)
   return (types: string[], name: string, base?: string) => {
     for (const t of types) {
       const lines = byName.get(`${t}\u0000${name}`)
@@ -132,7 +135,7 @@ function priceFinder (items: PriceItem[], rule: VariantRule = 'market', links = 
       // A unique that comes on several bases is priced per base.
       const onBase = base ? lines.filter(i => i.variant.split(', ').includes(base)) : []
       const pool = onBase.length ? onBase : lines
-      const solid = rule === 'market' ? pool.filter(i => !isThin(i)) : []
+      const solid = rule !== 'safety' ? pool.filter(i => !isThin(i)) : []
       return best(solid.length ? solid : pool)
     }
     return undefined
@@ -260,9 +263,9 @@ export function dropLookup (
   // (Guy 2026-11-28: a unique Large Cluster Jewel is Voices, ~1200c).
   allOnBase: (base: string) => string[] = uniquesOnBase
 ): PriceLookup {
-  const max = priceLookup(items, uniquesOnBase, 'max')
-  const best = priceLookup(items, allOnBase, 'max')
-  const find = priceFinder(items, 'market')
+  const max = priceLookup(items, uniquesOnBase, 'max', 'drop')
+  const best = priceLookup(items, allOnBase, 'max', 'drop')
+  const find = priceFinder(items, 'drop')
   return (group, base) => {
     if (!group.unique || group.foulborn || group.links || group.special) return max(group, base)
     const world = uniquesOnBase(base).filter(name => !isReplica(name))

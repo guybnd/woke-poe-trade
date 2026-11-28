@@ -43,7 +43,7 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
 // always on by default").
 // The Chase uniques looks (Guy 2026-11-28, picked on the section's header):
 // unique brown text and edge on a ground no other look uses, a Kite icon and
-// beam in `color`. T1 is the default.
+// beam in `color`. CHASE_DEFAULT (T6 Sage) is the default.
 export interface ChaseLook { id: string, name: string, text: number[], edge: number[], bg: number[], color: string }
 export const CHASE_LOOKS: ChaseLook[] = [
   { id: 'T1', name: 'Ice blue', text: [175, 96, 37], edge: [175, 96, 37], bg: [215, 232, 255], color: 'Brown' },
@@ -57,7 +57,9 @@ export const CHASE_LOOKS: ChaseLook[] = [
   { id: 'C3', name: 'Brown slab', text: [255, 255, 255], edge: [255, 255, 255], bg: [175, 96, 37], color: 'Orange' },
   { id: 'C4', name: 'Ember', text: [255, 140, 40], edge: [255, 140, 40], bg: [20, 8, 2], color: 'Pink' }
 ]
-export const chaseLookOf = (id?: string) => CHASE_LOOKS.find(l => l.id === id) ?? CHASE_LOOKS[0]
+export const chaseLookOf = (id?: string) => CHASE_LOOKS.find(l => l.id === (id ?? CHASE_DEFAULT)) ?? CHASE_LOOKS[0]
+// Guy's pick on the chase look page (2026-11-28): Sage.
+export const CHASE_DEFAULT = 'T6'
 
 export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always' }
 
