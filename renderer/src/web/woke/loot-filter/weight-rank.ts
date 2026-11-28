@@ -2,7 +2,7 @@
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import type { ItemFacts } from './item-facts'
-import { RANK_KEYS, filterBases } from './weights'
+import { RANK_KEYS, filterBases, ranksWithMoves } from './weights'
 import type { BaseRow, RankKey, WeightItem } from './weights'
 import { pastedRare } from './weight-samples'
 
@@ -10,8 +10,15 @@ import { pastedRare } from './weight-samples'
 export function weightRow (store: LootFilterStore, config: LootFilterWidget, facts: ItemFacts): { row: BaseRow, it: WeightItem } | null {
   const w = config.presets.weights
   if (!w.on || (facts.rarity === 'Rare' && facts.identified) || (facts.itemLevel ?? 0) < 68) return null
-  const bases = store.weightBases.value.length ? store.weightBases.value : (store.doc.value ? filterBases(store.doc.value, w.ranks) : [])
+  const bases = store.weightBases.value.length ? store.weightBases.value : (store.doc.value ? filterBases(store.doc.value, ranksWithMoves(w.ranks, config.presets.gear.moves)) : [])
   return pastedRare(facts, bases)
+}
+
+// A move on Base ranks is the base's rank for Equipment too: it drops the
+// rank Equipment had of its own (one list, Guy's pick 2026-11-28).
+export function clearWeightRanks (config: LootFilterWidget, bases: readonly string[]) {
+  const w = config.presets.weights
+  if (bases.some(b => b in w.ranks)) w.ranks = Object.fromEntries(Object.entries(w.ranks).filter(([n]) => !bases.includes(n)))
 }
 
 // Your rank for this base (back to the filter's when it's the same).

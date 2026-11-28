@@ -180,7 +180,7 @@ import { readStyle } from './edits'
 import { poeColour } from './colours'
 import { ruleLabel } from './parse'
 import type { Colour } from './edits'
-import { LOOK_CHANNELS, LOOK_DEFAULT, LOOK_KEYS, LOOK_LABEL, RANK_KEYS, MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, weightLook, stepFor, stepOf, PIN_ROWS, termsOf, weightOf } from './weights'
+import { LOOK_CHANNELS, LOOK_DEFAULT, LOOK_KEYS, LOOK_LABEL, RANK_KEYS, MULT_STEPS, NEED_MAX, multRange, NEED_MIN, STAGES, STEP_NAMES, WEIGHT_GROUPS, WEIGHT_LABEL, WEIGHT_TYPE, countedTerms, defaultWeights, filterBases, ranksWithMoves, weightLook, stepFor, stepOf, PIN_ROWS, termsOf, weightOf } from './weights'
 import type { BaseRow, LookChannel, LookKey, RankKey, WeightItem, WeightKey } from './weights'
 import { itemFacts } from './item-facts'
 import type { ItemFacts } from './item-facts'
@@ -208,7 +208,7 @@ const needPoints = computed({
 const bases = computed(() => {
   if (props.store.weightBases.value.length) return props.store.weightBases.value
   const doc = props.store.doc.value
-  return doc ? filterBases(doc, w.value.ranks) : []
+  return doc ? filterBases(doc, ranksWithMoves(w.value.ranks, props.config.presets.gear.moves)) : []
 })
 const pile = computed(() => samplePile(bases.value))
 type HandleKey = 'line' | 0 | 1 | 2

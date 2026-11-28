@@ -228,3 +228,17 @@ describe('quiet mode and fewer beams reach the Loot and Equipment tabs', () => {
     expect(wokeTier({ type: 'currency', tier: 's5', comment: '' })).toBeNaN()
   })
 })
+
+describe('one rank list for Base ranks and Equipment', () => {
+  it('a Base ranks move counts for Equipment unless Equipment ranks the base itself', async () => {
+    const { ranksWithMoves } = await import('@/web/woke/loot-filter/weights')
+    expect(ranksWithMoves({}, { 'Vaal Regalia': 'r1', 'Iron Hat': 'none', 'Plate Vest': 'never' })).toEqual({ 'Vaal Regalia': 'r1', 'Iron Hat': 'r0' })
+    expect(ranksWithMoves({ 'Vaal Regalia': 'r3' }, { 'Vaal Regalia': 'r1' })).toEqual({ 'Vaal Regalia': 'r3' })
+  })
+  it('a Base ranks move drops the Equipment rank of that base', async () => {
+    const { clearWeightRanks } = await import('@/web/woke/loot-filter/weight-rank')
+    const config = { presets: { weights: { ranks: { 'Vaal Regalia': 'r3', 'Iron Hat': 'r1' } } } } as unknown as Parameters<typeof clearWeightRanks>[0]
+    clearWeightRanks(config, ['Vaal Regalia'])
+    expect(config.presets.weights.ranks).toEqual({ 'Iron Hat': 'r1' })
+  })
+})
