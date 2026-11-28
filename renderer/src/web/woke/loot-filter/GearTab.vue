@@ -1157,7 +1157,7 @@ function neverOffBuild () {
 .dragging { opacity: 0.45; }
 .famRow { border-color: var(--w-line); background: var(--w-panel-2); }
 .famRow:focus-visible { outline: 2px solid var(--w-accent, #e0b860); }
-.famCaret { width: 9px; color: var(--w-dim); font-size: 10px; }
+.famCaret { width: 9px; color: var(--w-dim); font-size: calc(10px * var(--w-text-scale, 1)); }
 .famMember { margin-left: 10px; }
 .laneCan { outline: 1px dashed rgb(224 184 96 / 55%); }
 .laneOver { outline: 2px solid var(--w-accent, #e0b860); background: rgb(224 184 96 / 12%); }
