@@ -413,7 +413,8 @@ export function currencyItems (doc: FilterDoc, lookup: PriceLookup | null, edits
   if (lookup && doc.blocks.some(b => b.type === BLIGHT_TYPE)) {
     for (const k of MAP_KINDS) {
       const group: EconomyGroup = { type: k.cat, label: k.prefix, ninja: [k.ninja] }
-      for (let t = 1; t <= 17; t++) {
+      // Blighted maps stop at tier 16 (no "Map (Tier 17)" base to name).
+      for (let t = 1; t <= 16; t++) {
         const name = `${k.prefix} (Tier ${t})`
         const p = lookup(group, name)
         if (!p || !(p.chaos > 0)) continue
