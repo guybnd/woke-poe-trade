@@ -263,6 +263,13 @@ const mark = (k: WeightKey, yes: FilterCondition[], rgb: [number, number, number
 export const EXOTIC_RGB: Record<'x1' | 'x2', [number, number, number]> = { x1: [255, 50, 200], x2: [255, 120, 180] }
 export interface ExoticLists { x1: string[], x2: string[] }
 const ANY_EXOTIC: ExoticLists = { x1: ['x'], x2: ['x'] }
+// Guy's pick (2026-11-28, E1 + "border and white background, tink style"):
+// a valuable exotic gets magenta text and border on white, above every other
+// look row in every channel.
+export const EXOTIC_TOP: Record<LookChannel, [number, number, number]> = { border: EXOTIC_RGB.x1, bg: [255, 255, 255], text: EXOTIC_RGB.x1 }
+export function withTop (look: Record<LookChannel, readonly LookKey[]>): Record<LookChannel, readonly LookKey[]> {
+  return { border: ['exotop', ...look.border], bg: ['exotop', ...look.bg], text: ['exotop', ...look.text] }
+}
 
 function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: ExoticLists): Alt[] {
   switch (k) {
@@ -281,6 +288,7 @@ function lookAlts (k: Exclude<LookKey, 'score'>, ch: LookChannel, exotic: Exotic
     case 'fated': return [mark('fated', [T('Fated')], [255, 205, 130])]
     case 'mirr': return [mark('mirr', [T('Mirrored')], [160, 200, 255])]
     case 'corr': return [{ conds: [T('Corrupted')], rgb: ch === 'border' ? [210, 40, 40, 255] : [90, 0, 0, 255], has: it => it.corruption !== 'no' }]
+    case 'exotop': return exotic.x1.length ? [{ conds: [c('BaseType', '==', exotic.x1)], rgb: op(EXOTIC_TOP[ch]), has: (it: WeightItem) => it.rank === 'x1' }] : []
     case 'exotic': return (['x2', 'x1'] as const).filter(r => exotic[r].length)
       .map(r => ({ conds: [c('BaseType', '==', exotic[r])], rgb: op(EXOTIC_RGB[r]), has: (it: WeightItem) => it.rank === r }))
     case 'rarity': return (['Normal', 'Magic', 'Rare'] as WeightRarity[]).map(r => ({ conds: [c('Rarity', '', [r])], rgb: ch === 'bg' ? RARITY_BG[r] : RARITY_TEXT[r], has: (it: WeightItem) => rarityOf(it) === r }))
@@ -327,7 +335,7 @@ export function weightLook (it: WeightItem, look: Record<LookChannel, readonly L
   if (step === 0) return stepActions(0)
   const out: FilterAction[] = []
   for (const ch of ['border', 'bg', 'text'] as LookChannel[]) {
-    const rgb = lookOf(it, ch, look[ch], step)
+    const rgb = lookOf(it, ch, withTop(look)[ch], step)
     if (rgb) out.push(paint(ch, rgb))
   }
   return [...out, ...stepActions(step)]
@@ -335,7 +343,7 @@ export function weightLook (it: WeightItem, look: Record<LookChannel, readonly L
 
 // Which look row a channel shows for this item, if any (for the tab).
 export function lookKeyOf (it: WeightItem, look: Record<LookChannel, readonly LookKey[]>, ch: LookChannel, step: Step): LookKey | null {
-  for (const k of look[ch]) {
+  for (const k of withTop(look)[ch]) {
     if (k === 'score') { if (STEP_PAINT[ch][step]) return k; continue }
     if (lookAlts(k, ch, ANY_EXOTIC).some(x => x.has(it))) return k
   }
@@ -555,7 +563,7 @@ export function compileWeights (w: WeightSettings, bases: BaseRow[]): Compiled {
   const blocks: FilterBlock[] = []
   const perStep = [0, 0, 0, 0, 0]
   let chars = 0
-  const look = w.look
+  const look = withTop(w.look)
   const exotic: ExoticLists = { x1: bases.filter(b => b.rank === 'x1').map(b => b.name), x2: bases.filter(b => b.rank === 'x2').map(b => b.name) }
   // Where the step rules paint a channel themselves ('score' on its list),
   // rows ranked above it: an item that has one gets that colour instead. A

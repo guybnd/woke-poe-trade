@@ -181,6 +181,9 @@ export type LookChannel = 'border' | 'bg' | 'text'
 export type LookKey =
   | 'qual' | 'synth' | 'fract' | 'infl' | 'eld' | 'abyss' | 'ench' | 'l6' | 'cruc' | 'strand' | 'l5' | 'fated' | 'mirr'
   | 'corr' | 'exotic' | 'rarity' | 'score'
+  // Valuable exotic bases' Tink look (Guy, 2026-11-28): always first in
+  // every channel, never on the tab's lists (weights.ts withTop).
+  | 'exotop'
 export const LOOK_CHANNELS: Array<{ key: LookChannel, label: string, job: string }> = [
   { key: 'border', label: 'Border', job: 'The best special mark' },
   { key: 'bg', label: 'Background', job: 'How good it is, at a glance' },
@@ -203,9 +206,10 @@ export const LOOK_LABEL: Record<LookKey, string> = {
   corr: 'Corrupted',
   exotic: 'Exotic base',
   rarity: 'Rarity',
-  score: 'Score step'
+  score: 'Score step',
+  exotop: 'Valuable exotic'
 }
-export const LOOK_KEYS = Object.keys(LOOK_LABEL) as LookKey[]
+export const LOOK_KEYS = (Object.keys(LOOK_LABEL) as LookKey[]).filter(k => k !== 'exotop')
 // Guy's order (look channels page, 2026-11-27).
 export const LOOK_DEFAULT: Readonly<Record<LookChannel, readonly LookKey[]>> = {
   border: ['qual', 'synth', 'fract', 'infl', 'eld', 'abyss', 'ench', 'l6', 'cruc', 'strand', 'l5', 'fated', 'mirr'],
@@ -222,7 +226,7 @@ export function normalizeLook (v: unknown): Record<LookChannel, LookKey[]> {
   const out = { border: [], bg: [], text: [] } as Record<LookChannel, LookKey[]>
   for (const c of LOOK_CHANNELS) {
     for (const k of raw[c.key] as unknown[]) {
-      if (typeof k !== 'string' || !(k in LOOK_LABEL) || seen.has(k as LookKey)) continue
+      if (typeof k !== 'string' || !(k in LOOK_LABEL) || k === 'exotop' || seen.has(k as LookKey)) continue
       seen.add(k as LookKey)
       out[c.key].push(k as LookKey)
     }
