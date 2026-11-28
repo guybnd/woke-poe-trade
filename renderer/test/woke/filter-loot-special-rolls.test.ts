@@ -6,7 +6,7 @@ import { parseFilter, serializeFilter } from '@/web/woke/loot-filter/parse'
 import { matchItem } from '@/web/woke/loot-filter/match'
 import type { ItemFacts } from '@/web/woke/loot-filter/item-facts'
 import { validateFilter } from '@/web/woke/loot-filter/validate'
-import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency } from '@/web/woke/loot-filter/currency-weights'
+import { CURRENCY_TYPE, applyCurrency, currencyItems, defaultCurrency, rowForBase } from '@/web/woke/loot-filter/currency-weights'
 import { NET_GROUPS, priceLookup } from '@/web/woke/loot-filter/economy'
 import type { PriceLookup } from '@/web/woke/loot-filter/economy'
 import type { PriceItem } from '@/web/woke/market/types'
@@ -25,13 +25,13 @@ const unique = (baseType: string, more: Partial<ItemFacts> = {}): ItemFacts => (
 
 describe('special unique rolls on the Loot tab', () => {
   it('prices each special rule per base, a 6-link at least 20 Fusings', () => {
-    const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec' || i.cat === 'uniq6l').map(i => [i.name, i]))
-    expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe', cat: 'uniq6l', floor: 4 })
+    const items = new Map(currencyItems(parseFilter(REGULAR), lookup).filter(i => i.cat === 'uniqspec' || i.cat === 'uniqlinks').map(i => [i.name, i]))
+    expect(items.get('Simple Robe, 6-link')).toMatchObject({ chaos: 10, bt: 'Simple Robe', cat: 'uniqlinks', floor: 4 })
     // Any other 6-linked unique: one row (Guy's R1).
     expect(items.get('Vaal Regalia, 6-link')).toBeUndefined()
     // Priced at its 20 Fusings and never below Big, not at the best 6-link
     // there is (Guy: "any unique 6link should not be tink").
-    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 10, floor: 4, cat: 'uniq6l' })
+    expect(items.get('Any unique, 6-link')).toMatchObject({ chaos: 10, floor: 4, cat: 'uniqlinks' })
     expect(items.get('Any unique, 6-link')?.bts).toContain('Vaal Regalia')
     expect(items.get('Onyx Amulet, Shaper and Elder')?.chaos).toBe(5000)
     expect(items.get('Glorious Plate, no sockets')?.chaos).toBe(0.1)
@@ -86,10 +86,23 @@ describe('special unique rolls on the Loot tab', () => {
     const six = { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>
     expect(matchItem(doc, unique('Vaal Regalia', six)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's5' })
     expect(validateFilter(parseFilter(serializeFilter(doc))).map(p => p.message)).toEqual([])
+    // Alt+F's card prices that base as the filter does.
+    const row = currencyItems(parseFilter(REGULAR), rich).find(i => i.name === 'Any unique, 6-link')!
+    expect(rowForBase(row, 'Vaal Regalia', cfg).chaos).toBe(5000)
+    expect(rowForBase(row, 'Simple Robe', cfg).chaos).toBe(10)
     // Your step on the row decides for every base.
     cfg.items['Any unique, 6-link'] = { step: 2 }
     const doc2 = parseFilter(REGULAR)
     applyCurrency(doc2, cfg, rich)
     expect(matchItem(doc2, unique('Vaal Regalia', six)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's2' })
+  })
+
+  it('Big turned off on the Uniques page still shows 6-linked uniques at Big', () => {
+    const cfg = defaultCurrency()
+    cfg.on = true
+    cfg.offBy = { uniques: [4] }
+    const doc = parseFilter(REGULAR)
+    applyCurrency(doc, cfg, lookup)
+    expect(matchItem(doc, unique('Vaal Regalia', { socketGroups: ['RRRRRR'] } as Partial<ItemFacts>)).final?.block).toMatchObject({ type: CURRENCY_TYPE, tier: 's4', visibility: 'Show' })
   })
 })

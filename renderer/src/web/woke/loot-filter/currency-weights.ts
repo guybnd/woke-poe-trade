@@ -791,7 +791,7 @@ export function faintLook (rgb: readonly number[]): StylePatch {
 
 // Steps turned off (Guy 2026-11-28: they hide, they don't fall to the
 // quieter step) for this item: never its own step or its Collecting floor.
-export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
+export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<CurrencyItem, 'fixed' | 'est' | 'own' | 'floor'>>, c: Pick<CurrencySettings, 'items' | 'offBy'> & Partial<Pick<CurrencySettings, 'catMode'>>): number[] {
   const e = c.items[it.name]
   if (e?.step != null || fixedOf(it, e, sectionMode({ catMode: c.catMode ?? {} }, it.cat))) return []
   // A guessed special map never hides on a step turned off (Guy 2026-11-28:
@@ -801,7 +801,10 @@ export function offSteps (it: Pick<CurrencyItem, 'name' | 'cat'> & Partial<Pick<
   // whatever steps are turned off (Guy 2026-11-28: chase bases hid with
   // Small and Normal off).
   if (sectionMode({ catMode: c.catMode ?? {} }, it.cat) === 'always') return []
-  return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min)
+  // A row's own floor (6-links at Big) stays on, like Collecting: turning
+  // Big off on the Uniques page mustn't hide every 6-linked unique.
+  const floor = it.floor && e?.price == null ? it.floor : undefined
+  return stepsOffIn(c, it.cat).filter(s => s >= 1 && s <= 4 && s !== e?.min && s !== floor)
 }
 // The steps off in a section: its own when it sets them, else its page's,
 // else every page's (Guy 2026-11-28).
@@ -1481,13 +1484,22 @@ function applySpecialRolls (doc: FilterDoc, cfg: CurrencySettings, items: Curren
   return { blocks, items, chars: parts.reduce((n, x) => n + x.chars, 0) }
 }
 
+// The row as the filter writes it for one base: a base the row splits off
+// (per) carries its own price. For Alt+F's card, so it says what the game shows.
+export function rowForBase (it: CurrencyItem, base: string, cfg: Pick<CurrencySettings, 'items'>): CurrencyItem {
+  const e = cfg.items[it.name]
+  const hit = it.per?.find(x => x.bt === base)
+  if (!hit || e?.step != null || e?.price != null || e?.look) return it
+  return { ...it, chaos: hit.chaos }
+}
+
 // "Any unique, 6-link" with bases worth more than the row: each such base
 // gets a rule of its own at its plain price (same floor), before the row, so
 // it never shows quieter than it would unlinked. Only while the row has no
 // edit of yours: your step, price or look decides for every base then.
 function splitPer (it: CurrencyItem, cfg: CurrencySettings): CurrencyItem[] {
   const e = cfg.items[it.name]
-  if (!it.per?.length || !it.bts || (e && Object.keys(e).length)) return [it]
+  if (!it.per?.length || !it.bts || e?.step != null || e?.price != null || e?.look) return [it]
   const hot = new Set(it.per.map(x => x.bt))
   const rest = it.bts.filter(b => !hot.has(b))
   const row: CurrencyItem = { ...it }

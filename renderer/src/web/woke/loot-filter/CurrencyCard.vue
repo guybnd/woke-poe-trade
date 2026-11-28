@@ -102,7 +102,7 @@ import StateChip from './StateChip.vue'
 import type { ChipOption } from './StateChip.vue'
 import { SECTION_MODES } from './section-modes'
 import CurrencyItemEditor from './CurrencyItemEditor.vue'
-import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
+import { CSTEP_NAMES, ALL_CATEGORIES, kindOf, CURRENCY_TYPE, MULT_MAX, MULT_MIN, NUDGE_MAX, catColour, currencyFullLook, currencyItems, faintOn, fixedOf, forcedHidden, minStack, offSteps, pileWorth, rowForBase, scaled, sectionMode, sizeCutNow, stacksFor, stepOfPile, stepStarts, withEdit } from './currency-weights'
 import { toggleNotAvg } from './currency-settings'
 import { lvCurrencyOf, setLvCurrency } from './levelling'
 import { DEFAULT_BG, DEFAULT_TEXT } from './edits'
@@ -173,7 +173,8 @@ const raw = computed<CurrencyItem | null>(() => {
   const all = currencyItems({ ...doc, blocks: doc.blocks.filter(b => b.type !== CURRENCY_TYPE) }, lookup, {}, cardFacts.value, props.gem ? gemLinesOf(props.store.prices.items.value) : null, ownTables.value)
   if (!props.gem) {
     const hit = itemFor(all, props.name, props.rule)
-    return (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+    const row = (hit && !wrongRarity(hit) ? hit : null) ?? rowFor(all) ?? null
+    return row && props.facts?.baseType ? rowForBase(row, props.facts.baseType, cfg.value) : row
   }
   return gemItemFor(all, props.name, props.gem, props.rule)
 })
