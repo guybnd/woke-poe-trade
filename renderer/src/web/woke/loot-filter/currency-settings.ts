@@ -55,6 +55,10 @@ export interface CurrencySettings {
   // class page (its ruler: 'currency', 'uniques'...) or a section that sets
   // its own (Guy 2026-11-28: Normal off on Currency hid it on every page).
   offBy: Record<string, number[]>
+  // A section's own ruler (Guy's pick A, 2026-11-28): where Small, Normal,
+  // Decent, Big and Tink start in it, before Strictness. It leaves the main
+  // ruler and the section's Price bias; Strictness still moves it.
+  rulers: Record<string, number[]>
   // Every step's price × this; null follows the filter's strictness.
   mult: number | null
   // A whole category set by hand (Guy 2026-11-27, Loot tab: Off / Weighted /
@@ -98,7 +102,7 @@ export function toggleNotAvg (c: Pick<CurrencySettings, 'notAvg'>, name: string)
 }
 
 export function defaultCurrency (): CurrencySettings {
-  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
+  return { on: false, line: 0.2, from: [1, 3, 10, 60], nudge: {}, items: {}, steps: {}, cats: {}, offBy: {}, rulers: {}, mult: null, catMode: {}, faint: { on: false, until: FAINT_UNTIL }, mapFrom: 1, gold: [1, 500, 3000, 10000, 50000] }
 }
 
 const NAME = /^[^"\n]{1,80}$/
@@ -139,6 +143,16 @@ function offOf (c: Partial<CurrencySettings> & { off?: unknown } | undefined): R
   return out
 }
 
+function rulersOf (v: unknown): Record<string, number[]> {
+  const out: Record<string, number[]> = {}
+  if (v && typeof v === 'object') {
+    for (const [k, r] of Object.entries(v)) {
+      if (/^[a-z]{1,20}$/.test(k) && Array.isArray(r) && r.length === 5 && r.every((x, i) => num(x, 0.01, 1e6) != null && (!i || x >= r[i - 1]))) out[k] = [...r]
+    }
+  }
+  return out
+}
+
 export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): CurrencySettings {
   const d = defaultCurrency()
   const from = [...d.from] as CurrencySettings['from']
@@ -170,6 +184,7 @@ export function normalizeCurrency (c: Partial<CurrencySettings> | undefined): Cu
     cats: patches(c?.cats, /^[a-z]{1,20}$/),
     mult: num(c?.mult, MULT_MIN, MULT_MAX) ?? null,
     offBy: offOf(c),
+    rulers: rulersOf(c?.rulers),
     // Kept light (this runs at startup): what reads them takes only 'off',
     // 'always', true and a number (currency-weights.ts).
     catMode: { ...c?.catMode },

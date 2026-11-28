@@ -629,7 +629,7 @@ export function scaled (c: CurrencySettings, strictness: string | null): Currenc
   // The size cut: Auto turns it on from Strict (×1.25) up (Guy's W2).
   const sizeOn = c.sizeCut === 'on' || (c.sizeCut !== 'off' && m >= 1.25)
   if (m === 1) return sizeOn === Boolean(c.sizeOn) ? c : { ...c, sizeOn }
-  return { ...c, sizeOn, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))) }
+  return { ...c, sizeOn, line: c.line * m, from: c.from.map(f => f * m) as CurrencySettings['from'], gold: c.gold.map(g => Math.max(1, Math.round(g * m))), rulers: Object.fromEntries(Object.entries(c.rulers ?? {}).map(([k, r]) => [k, r.map(v => v * m)])) }
 }
 
 // The line for a category, after its nudge.
@@ -642,7 +642,10 @@ export function catLine (c: Pick<CurrencySettings, 'line' | 'nudge'>, cat: strin
 
 // Where each step 1..5 starts, in chaos, with the category's strictness:
 // Small at the line, the louder ones at their own price, never under it.
-export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'>, cat = ''): number[] {
+// A section with its own ruler starts its steps there, without its bias.
+export function stepStarts (c: Pick<CurrencySettings, 'line' | 'from' | 'nudge'> & Partial<Pick<CurrencySettings, 'rulers'>>, cat = ''): number[] {
+  const own = c.rulers?.[cat]
+  if (own) return own.map(v => Math.max(own[0], v))
   const k = catMult(c, cat)
   const line = c.line * k
   return [line, ...c.from.map(f => Math.max(line, f * k))]

@@ -1515,6 +1515,13 @@ test('Currency weights: categories fold open, an item opens its editor, and the 
   await expect(page.locator('[data-currency-step="2"]').locator('..')).not.toHaveClass(/off/)
   await orbSteps.getByRole('button', { name: "Orbs steps back to the ruler's" }).click()
   await expect(orbSteps).toContainText('as the ruler')
+  // Own ruler (Guy's A): a section gets a ruler of its own, then goes back to the main one.
+  const orbRuler = page.locator('[data-currency-cat="orbs"] [data-currency-own-ruler]')
+  await orbRuler.getByRole('button', { name: 'Own ruler' }).click()
+  await expect(orbRuler.locator('[data-currency-ruler]')).toBeVisible()
+  await expect(page.locator('[data-currency-cat="orbs"]')).toContainText('own ruler')
+  await orbRuler.getByRole('button', { name: 'Orbs back to the main ruler' }).click()
+  await expect(orbRuler.locator('[data-currency-ruler]')).toHaveCount(0)
   const alch = page.locator('[data-currency-item="Orb of Alchemy"]')
   await expect(alch).toBeVisible()
   await alch.click()

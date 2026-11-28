@@ -183,6 +183,17 @@ describe('currency weights', () => {
     expect(serializeFilter(doc)).toBe(serializeFilter(parseFilter(SEMI)))
   })
 
+  it('a section with its own ruler starts its steps there, Strictness on top, bias left out (Guy\'s A)', () => {
+    const c = defaultCurrency()
+    c.nudge = { essences: 2 }
+    c.rulers = { essences: [1, 2, 4, 8, 100] }
+    expect(stepStarts(c, 'essences')).toEqual([1, 2, 4, 8, 100])
+    expect(stepStarts(c, 'orbs')).toEqual([c.line, ...c.from.map(f => Math.max(c.line, f))])
+    c.mult = 2
+    expect(scaled(c, null).rulers.essences).toEqual([2, 4, 8, 16, 200])
+    expect(normalizeCurrency(JSON.parse('{"rulers":{"essences":[1,2,4,8,100],"oils":[5,1,2,3,4],"orbs":[1,2]}}')).rulers).toEqual({ essences: [1, 2, 4, 8, 100] })
+  })
+
   it('a step turned off keeps its look on the hidden piles, quiet, for Alt (Guy 2026-11-28)', () => {
     const compiled = applyCurrency(parseFilter(SEMI), on(c => { c.line = 0.5; c.offBy = { currency: [2] } }), lookup)!
     const off = compiled.blocks.filter(b => b.comment.includes('Normal off'))

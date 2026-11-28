@@ -56,6 +56,8 @@ const props = defineProps<{
   samples: Record<number, string>
   // The Gold ruler: pile sizes instead of chaos (CurrencySettings.gold).
   gold?: boolean
+  // The main ruler: its own prices even when the sample section has its own ruler.
+  main?: boolean
 }>()
 // Prices come back as shown (after Strictness); the tab turns them into yours.
 const emit = defineEmits<{ edit: [CStep | null], set: [step: number, chaos: number] }>()
@@ -73,7 +75,7 @@ const title = (s: CStep) => s === 0
 const drag = ref<{ i: number, v: number, id: number } | null>(null)
 // The picked section's real prices: its own Strictness on top (Guy 2026-11-28).
 const unit = props.gold ? 'gold' : 'chaos'
-const shown = computed(() => props.gold ? props.eff.gold : stepStarts(props.eff, props.cat))
+const shown = computed(() => props.gold ? props.eff.gold : stepStarts(props.main ? { ...props.eff, rulers: {} } : props.eff, props.cat))
 const vals = computed(() => shown.value.map((v, i) => drag.value?.i === i ? drag.value.v : v))
 
 // Log scale, wide enough for the line and Tink with room either side.

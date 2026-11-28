@@ -26,7 +26,8 @@
 
     <slot name="extra" />
 
-    <StepRuler :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
+    <div :class="$style.mainLab" data-currency-main-ruler><b>Main ruler</b><span class="w-faint text-xs">every Loot page{{ ownRulers.length ? ` · ${ownRulers.length === 1 ? `${ownRulers[0]} has its own` : `${ownRulers.length} sections have their own`}` : '' }}</span></div>
+    <StepRuler main :c="c" :eff="eff" :cat="sampleCat" :faint-look="faintSample" :faint-on="c.faint.on" :off="pageOff" :edit="stepEdit" :samples="stepSample"
       @edit="s => stepEdit = s" @set="setShown" />
 
     <div v-if="stepEdit === 0" :class="$style.stepEd" data-currency-step-editor>
@@ -73,12 +74,13 @@
         <WIcon :item="g.cat.art" size="sm" />
         <span :class="$style.catName">{{ g.cat.name }}</span>
         <span v-if="g.edited" :class="$style.edited">{{ g.edited }} edited</span>
+        <span v-if="c.rulers[g.cat.id]" :class="$style.edited">own ruler</span>
         <span :class="$style.count">{{ g.shown }} of {{ g.all }} show</span>
         <span :class="$style.dots" aria-hidden="true"><i v-for="r in g.rows" :key="r.it.name" :style="{ background: STEP_CSS[r.one] }" /></span>
         <span class="flex-1" />
         <span data-loot-section-mode>
           <StateChip :model-value="sectionMode(c, g.cat.id)" :options="SECTION_MODES" :title="g.cat.name" :dflt="sectionMode({ catMode: {} }, g.cat.id)"
-            :bias="c.nudge[g.cat.id] ?? 0" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
+            :bias="c.rulers[g.cat.id] ? undefined : c.nudge[g.cat.id] ?? 0" no-bias-in="off" @update:model-value="v => setCatMode(g.cat.id, v)" @update:bias="n => setNudge(g.cat.id, n)" />
         </span>
       </div>
       <div v-if="isOpen(g.cat.id)" :class="$style.catBody" role="table" :aria-label="`${g.cat.name} and when they show`">
@@ -111,6 +113,20 @@
           <label v-for="s in [1, 2, 3, 4]" :key="s" :class="$style.offTog"><input type="checkbox" :checked="!stepsOffIn(c, g.cat.id).includes(s)" :aria-label="`Show ${CSTEP_NAMES[s]} in ${g.cat.name}`" @change="toggleSecOff(g.cat.id, s)"> {{ CSTEP_NAMES[s] }}</label>
           <span v-if="c.offBy[g.cat.id] == null" class="w-faint text-xs">as the ruler</span>
           <button v-else type="button" class="w-icon-btn" :title="`${g.cat.name} steps back to the ruler's`" :aria-label="`${g.cat.name} steps back to the ruler's`" @click="setOff(g.cat.id, null)"><i class="fas fa-undo" /></button>
+        </div>
+        <div v-if="g.cat.id !== 'gold'" :class="$style.goldRuler" data-currency-own-ruler :data-goto-spot="g.cat.id === 'orbs' ? 'section-ruler' : undefined">
+          <span :class="$style.ownHead">
+            <span :class="$style.lookLab">Prices</span>
+            <template v-if="c.rulers[g.cat.id]">
+              <span class="text-xs">Own ruler, Strictness still moves it</span>
+              <button type="button" class="w-icon-btn" :title="`${g.cat.name} back to the main ruler`" :aria-label="`${g.cat.name} back to the main ruler`" @click="setRuler(g.cat.id, null)"><i class="fas fa-undo" /></button>
+            </template>
+            <template v-else>
+              <span class="w-faint text-xs">main ruler{{ c.nudge[g.cat.id] ? ', with its Price bias' : '' }}</span>
+              <WButton size="sm" variant="ghost" icon="fas fa-sliders-h" :title="`Give ${g.cat.name} its own ruler, starting where its steps are now`" @click="ownRuler(g.cat.id)">Own ruler</WButton>
+            </template>
+          </span>
+          <StepRuler v-if="c.rulers[g.cat.id]" :c="c" :eff="eff" :cat="g.cat.id" :faint-look="faintSample" :faint-on="c.faint.on" :off="stepsOffIn(c, g.cat.id)" :edit="stepEdit" :samples="{}" @edit="s => stepEdit = s" @set="(i, v) => setOwn(g.cat.id, i, v)" />
         </div>
         <div v-if="g.cat.id === 'gold'" :class="$style.goldRuler">
           <span :class="$style.lookLab">Pile size for each step</span>
@@ -179,7 +195,7 @@ import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
 import { CHASE_LOOKS, chaseLookOf } from './unique-classes'
 import { toggleNotAvg } from './currency-settings'
-import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, sizeCutNow, stepsOffIn } from './currency-weights'
+import { withEdit, CSTEP_NAMES, ALL_CATEGORIES, kindOf, SUBGROUPS, catColour, currencyFullLook, subgroupOf, CURRENCY_TYPE, LINE_MAX, LINE_MIN, catMult, currencyItems, defaultCurrency, offSteps, pileSteps, stacksFor, stepOfPile, levelOf, strictMult, scaled, MULT_MIN, MULT_MAX, FAINT_UNTIL, faintLook, faintOn, forcedHidden, sectionMode, sizeCutNow, stepStarts, stepsOffIn } from './currency-weights'
 import { LEVEL_NAMES } from './strictness'
 import type { CStep, CurrencyItem, ItemEdit, LootKind, SectionMode } from './currency-weights'
 import { cardFacts, loadCardFacts } from './card-facts'
@@ -417,6 +433,26 @@ function loudOnly (p: StylePatch): StylePatch {
   if (p.icon !== undefined) out.icon = p.icon
   return out
 }
+// A section's own ruler (Guy's pick A): starts where its steps are now
+// (main ruler × its bias), before Strictness; undo returns to the main one.
+const ownRulers = computed(() => CATS.value.filter(x => c.value.rulers[x.id]).map(x => x.name))
+function setRuler (cat: string, r: number[] | null) {
+  const next = Object.fromEntries(Object.entries(c.value.rulers).filter(([k]) => k !== cat))
+  if (r) next[cat] = r
+  c.value.rulers = next
+}
+function ownRuler (cat: string) {
+  setRuler(cat, stepStarts({ ...c.value, rulers: {} }, cat).map(v => Number(v.toPrecision(3))))
+}
+// The ruler hands back a price after Strictness: stored before it.
+function setOwn (cat: string, i: number, shown: number) {
+  const r = [...(c.value.rulers[cat] ?? stepStarts(c.value, cat))]
+  r[i] = Math.min(1e6, Math.max(0.01, Number((shown / mult.value).toPrecision(3))))
+  for (let j = i + 1; j < 5; j++) r[j] = Math.max(r[j], r[i])
+  for (let j = i - 1; j >= 0; j--) r[j] = Math.min(r[j], r[i])
+  setRuler(cat, r)
+}
+
 // Steps off: the ruler's switch is this page's (every section that doesn't
 // set its own); a section's own row is that section's only (Guy 2026-11-28).
 const pageOff = computed(() => c.value.offBy[props.kind] ?? [])
@@ -507,7 +543,7 @@ const statusText = computed(() => {
 const changed = computed(() => {
   const d = defaultCurrency()
   const mine = (o: Record<string, unknown>) => Object.keys(o).some(k => catIds.value.has(k))
-  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || pageOff.value.length > 0 || mine(c.value.offBy) || c.value.mult != null
+  return mine(c.value.catMode) || c.value.faint.on !== d.faint.on || c.value.faint.until !== d.faint.until || c.value.line !== d.line || c.value.from.some((v, i) => v !== d.from[i]) || mine(c.value.nudge) || Object.keys(c.value.steps).length > 0 || mine(c.value.cats) || pageOff.value.length > 0 || mine(c.value.offBy) || mine(c.value.rulers) || c.value.mult != null
 })
 // This class's categories: Defaults leaves the other classes' sections (and
 // the League items' Offs) as they are.
@@ -516,7 +552,7 @@ function reset () {
   const d = defaultCurrency()
   const others = <T>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).filter(([k]) => !catIds.value.has(k)))
   // Your item edits are a list you built: Defaults keeps them. The steps are shared by every class.
-  Object.assign(c.value, { line: d.line, from: d.from, nudge: others(c.value.nudge), steps: d.steps, cats: others(c.value.cats), offBy: others(Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))), mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
+  Object.assign(c.value, { line: d.line, from: d.from, nudge: others(c.value.nudge), steps: d.steps, cats: others(c.value.cats), offBy: others(Object.fromEntries(Object.entries(c.value.offBy).filter(([k]) => k !== props.kind))), rulers: others(c.value.rulers), mult: d.mult, catMode: others(c.value.catMode), faint: d.faint })
 }
 
 function chaosText (v: number): string {
@@ -580,6 +616,8 @@ function chaosText (v: number): string {
 .stepEd { border: 1px solid var(--w-accent, #c8a565); border-radius: var(--w-r-sm); background: var(--w-panel-2); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .stepEdHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .samples { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 6px; background: #1a1712; border-radius: var(--w-r-sm); }
+.ownHead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.mainLab { display: flex; align-items: baseline; gap: 8px; font-size: var(--w-fs-sm); }
 .goldRuler { display: flex; flex-direction: column; gap: 2px; padding: 4px 0 2px; border-bottom: 1px solid var(--w-line); }
 .catLook { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 2px 2px 4px; border-bottom: 1px solid var(--w-line); }
 .swatch { flex-shrink: 0; width: 20px; height: 18px; padding: 0; border: 1px solid var(--w-line); background: none; cursor: pointer; }
