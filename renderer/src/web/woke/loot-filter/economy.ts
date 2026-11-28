@@ -16,7 +16,7 @@
 //  - a price that jumped or crashed this week (volatile) waits;
 //  - groups whose tiers aren't ordered by price are left alone.
 import type { FilterBlock, FilterDoc } from './parse'
-import { applyEdits, blockHasBase, blocksOf } from './edits'
+import { applyEdits, blockHasBase, blocksOf, withBlockIndex } from './edits'
 import type { FilterEdit } from './edits'
 import type { PriceItem } from '../market/types'
 import { isThin } from '../market/types'
@@ -569,11 +569,11 @@ export function mergeMoves (stored: PriceMove[], next: PriceMove[]): PriceMove[]
 // read off a fresh parse before the moves go on. A move to where NeverSink has
 // since put the item itself changes nothing, so its old tier isn't its home.
 export function movesOutOfPlace (doc: FilterDoc, moves: PriceMove[]): PriceMove[] {
-  return moves.filter(m => {
+  return withBlockIndex(doc, () => moves.filter(m => {
     const blocks = blocksOf(doc, m.type)
     return blocks.some(b => b.tier === m.from && blockHasBase(b, m.base)) &&
       !blocks.some(b => b.tier === m.to && blockHasBase(b, m.base))
-  })
+  }))
 }
 
 // Applies stored price moves to a fresh parse. A move only holds while the item
@@ -582,10 +582,12 @@ export function movesOutOfPlace (doc: FilterDoc, moves: PriceMove[]): PriceMove[
 // A move that took a tier's namesake out (stored before that was refused) is
 // dropped.
 export function applyPriceMoves (doc: FilterDoc, moves: PriceMove[]): number {
-  const edits: FilterEdit[] = livePriceMoves(moves)
-    .filter(m => blocksOf(doc, m.type).some(b => (b.tier === m.from || b.tier === m.to) && blockHasBase(b, m.base)))
-    .map((m, i) => ({ id: -1 - i, kind: 'move', type: m.type, base: m.base, from: m.from, to: m.to }))
-  return applyEdits(doc, edits).filter(s => s.ok).length
+  return withBlockIndex(doc, () => {
+    const edits: FilterEdit[] = livePriceMoves(moves)
+      .filter(m => blocksOf(doc, m.type).some(b => (b.tier === m.from || b.tier === m.to) && blockHasBase(b, m.base)))
+      .map((m, i) => ({ id: -1 - i, kind: 'move', type: m.type, base: m.base, from: m.from, to: m.to }))
+    return applyEdits(doc, edits).filter(s => s.ok).length
+  })
 }
 
 // Keys of items the user moved or gave their own rule.

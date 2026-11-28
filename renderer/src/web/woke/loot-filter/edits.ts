@@ -245,6 +245,20 @@ function indexBlocks (doc: FilterDoc): Map<string | undefined, FilterBlock[]> {
   return byType
 }
 
+// Runs `fn` with blocksOf answered from an index of `doc`. Only for code
+// that adds blocks through applyOne (which keeps the index up to date) or
+// not at all.
+export function withBlockIndex<T> (doc: FilterDoc, fn: () => T): T {
+  if (blockIndex?.doc === doc) return fn()
+  const outer = blockIndex
+  blockIndex = { doc, byType: indexBlocks(doc) }
+  try {
+    return fn()
+  } finally {
+    blockIndex = outer
+  }
+}
+
 export function blocksOf (doc: FilterDoc, type: string, tier?: string): FilterBlock[] {
   if (blockIndex?.doc === doc) {
     const list = blockIndex.byType.get(type) ?? []
@@ -443,14 +457,10 @@ function applyOne (doc: FilterDoc, edit: FilterEdit): EditStatus {
 // look it had when you made it, even if you hide the tier afterwards.
 export function applyEdits (doc: FilterDoc, edits: FilterEdit[]): EditStatus[] {
   const order = [...edits.filter(e => e.kind === 'move'), ...edits.filter(e => e.kind !== 'move')]
-  const outer = blockIndex
-  blockIndex = { doc, byType: indexBlocks(doc) }
-  try {
+  return withBlockIndex(doc, () => {
     const results = new Map(order.map(e => [e, applyOne(doc, e)]))
     return edits.map(e => results.get(e)!)
-  } finally {
-    blockIndex = outer
-  }
+  })
 }
 
 // ---- recording ----
