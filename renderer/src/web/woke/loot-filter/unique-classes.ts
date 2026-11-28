@@ -39,7 +39,6 @@ export const UNIQUE_LOOK: Record<string, { text: [number, number, number], color
 // always on by default").
 export const UNIQUE_MODES: Record<string, SectionMode> = { uniqboss: 'always', uniqchase: 'always' }
 
-
 // NeverSink's tiers that list bases by price. Every other unique tier is a
 // special rule and stays NeverSink's.
 const TIER_CAT: Record<string, string> = {
