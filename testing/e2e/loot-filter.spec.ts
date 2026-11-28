@@ -1412,8 +1412,34 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await overlay.copyItem('items/rare-unid-gloves.txt', 'Alt + F')
   await expect(page.getByText('Item score')).toBeVisible()
   await expect(page.getByText('Total')).toBeVisible()
+  // The answer first, a ruler with the score's needle, one row of ranks, no NeverSink view.
+  await expect(page.locator('[data-score-answer]')).toContainText(/Shows|Hidden/)
+  await expect(page.locator('[data-score-ruler] [data-score-needle]')).toBeVisible()
+  await expect(page.getByRole('button', { name: /NeverSink view/ })).toHaveCount(0)
   await overlay.snap('score card')
-  await page.getByRole('button', { name: /Don't care/ }).first().click()
+  // Hovering the label says what sets its border, background and text.
+  await page.locator('[data-score-look]').hover()
+  await expect(page.locator('[data-score-look-why]')).toContainText('Background')
+  await overlay.snap('score card, why this look')
+  // A row's ‹ › changes it for every rare, says so, and undoes.
+  const tier = page.locator('[data-score-term="t4"]')
+  await tier.hover()
+  await tier.locator('[data-score-raise]').click()
+  await expect(page.locator('[data-score-changed]')).toContainText('every rare')
+  await overlay.snap('score card, a row raised')
+  await page.locator('[data-score-changed]').getByRole('button', { name: 'Undo' }).click()
+  await expect(page.locator('[data-score-changed]')).toHaveCount(0)
+  // Clicking a row opens its whole section; raising a tier past the next pushes that one up too.
+  await page.locator('[data-score-open="t4"]').click()
+  const sec = page.locator('[data-score-section]')
+  await expect(sec.locator('[data-score-section-row="t5"]')).toBeVisible()
+  for (let i = 0; i < 3; i++) await sec.locator('[data-score-section-row="t4"]').getByRole('button', { name: /^Raise/ }).click()
+  await expect(page.locator('[data-score-changed]')).toContainText('Tier 5')
+  await overlay.snap('score card, drop tiers open')
+  await page.locator('[data-score-changed]').getByRole('button', { name: 'Undo' }).click()
+  await page.locator('[data-score-rank="rj"]').click()
+  await expect(page.locator('[data-score-rank="rj"]')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('[data-score-rank-reset]')).toBeVisible()
   await overlay.snap('score card, base set to Don\'t care')
 
   // Tune opens the Rare weights tab.
@@ -1451,6 +1477,22 @@ test('Rare weights: Alt + F on an unidentified rare opens the Score card, and th
   await expect(page.locator('[data-equip-ranks] [data-lane="r1"]')).toBeVisible()
   await expect(page.getByRole('tab', { name: /Base ranks/ })).toHaveCount(0)
   await overlay.snap('equipment tab, base ranks')
+})
+
+test('Rare weights: Alt + F on a utility flask opens the same score card', async ({ overlay, fakeApp }) => {
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'woke-filters-'))
+  fs.writeFileSync(path.join(folder, 'NeverSink.filter'), zlib.gunzipSync(fs.readFileSync(path.join(FIXTURES, 'filters/neversink/3-STRICT.filter.gz'))))
+  await overlay.boot({ widgets: [{ ...lootFilter(folder), presets: { weights: { on: true } } }] })
+  const page = overlay.page
+  await expect.poll(() => fakeApp.registeredHotkeys(), { timeout: 20_000 }).toContain('Alt+F')
+  await overlay.copyItem('items/magic-flask.txt', 'Alt + F')
+  const card = page.locator('[data-score-flask]')
+  await expect(card.locator('[data-score-ruler]')).toBeVisible()
+  await expect(card.locator('[data-score-term="quality"]')).toContainText('20%')
+  await expect(card.locator('[data-score-rank="r1"]')).toHaveAttribute('aria-pressed', 'true')
+  await card.locator('[data-score-rank="rj"]').click()
+  await expect(card.locator('[data-score-answer]')).toContainText('Hidden')
+  await overlay.snap('flask score card')
 })
 
 test('Currency weights: categories fold open, an item opens its editor, and the ground pile opens an item', async ({ overlay, fakeApp }) => {
