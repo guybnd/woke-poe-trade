@@ -311,7 +311,10 @@ describe('currency weights', () => {
     const c = on(() => {})
     const fills = (cat: string) => [3, 4].map(s => currencyLook(s as 3 | 4, cat, c).background?.slice(0, 3))
     const kinds = ['orbs', 'gemskill', 'uniqplain', 'cardcur', 'invites', 'mapblight']
-    const all = kinds.flatMap(fills).map(x => x!.join(','))
+    const all = kinds.filter(k => k !== 'mapblight').flatMap(fills).map(x => x!.join(','))
+    // Maps (Guy's B): black on white at Decent and Big, told apart by their tint's edge.
+    expect(fills('mapblight')).toEqual([[255, 255, 255], [255, 255, 255]])
+    expect(currencyLook(4, 'mapblight', c).border).not.toEqual(currencyLook(4, 'maporig', c).border)
     expect(new Set(all).size).toBe(all.length)
     expect(fills('gemsup')).toEqual(fills('gemskill'))
     expect(currencyLook(4, 'gemskill', c).text?.slice(0, 3)).toEqual([255, 255, 255])

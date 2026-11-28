@@ -26,7 +26,7 @@ import type { ClusterPrice } from './cluster-prices'
 import type { BaseRename } from './gem-bases'
 import { applyWeights, filterBases } from './weights'
 import { applyCurrency } from './currency-weights'
-import { applyMapFloor } from './map-floor'
+import { applyMapFloor, applyMapLooks } from './map-floor'
 import type { CardFacts } from './card-classes'
 import type { GemLine } from './gem-classes'
 import type { CurrencyItem } from './currency-weights'
@@ -135,6 +135,7 @@ export function composeFilter (text: string, cfg: ComposeInput): Composed {
   const currency = applyCurrency(next, migrated.currency, cfg.prices.loot ?? cfg.prices.lookup, cfg.cards, cfg.gems)
   // Maps under the Loot tab's tier slider hide.
   applyMapFloor(next, migrated.currency)
+  applyMapLooks(next, migrated.currency)
   // Build rules go in first, so edits to them (restyles) apply on top.
   const input = cfg.build
   let buildCount = 0

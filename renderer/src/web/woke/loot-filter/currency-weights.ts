@@ -818,9 +818,9 @@ export const CLASS_FILL: Partial<Record<LootKind, { decent: { bg: Rgb, text: Rgb
   uniques: { decent: { bg: [185, 125, 75], text: [0, 0, 0] }, big: { bg: [125, 55, 15], text: [255, 255, 255], edge: [255, 225, 190] } },
   cards: { decent: { bg: [120, 200, 255], text: [0, 0, 0] }, big: { bg: [0, 75, 190], text: [255, 255, 255], edge: [205, 235, 255] } },
   fragments: { decent: { bg: [195, 145, 255], text: [0, 0, 0] }, big: { bg: [90, 30, 150], text: [255, 255, 255], edge: [235, 215, 255] } },
-  // Maps: grey, then the black on white map players know, edged in map gold
-  // (Tink is red text on white with a red beam).
-  maps: { decent: { bg: [205, 205, 205], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [230, 190, 40] } }
+  // Maps (Guy's B, 2026-11-28): black on white, edged in the kind's tint
+  // (MAP_STEP below; Tink is red text on white with a red beam).
+  maps: { decent: { bg: [255, 255, 255], text: [0, 0, 0] }, big: { bg: [255, 255, 255], text: [0, 0, 0], edge: [255, 255, 255] } }
 }
 
 // A category with a fill of its own, whatever its class: gold (currency
@@ -829,6 +829,10 @@ export const CAT_FILL: Record<string, NonNullable<typeof CLASS_FILL[LootKind]>> 
   gold: { decent: { bg: [255, 215, 90], text: [0, 0, 0] }, big: { bg: [120, 95, 10], text: [255, 255, 255], edge: [255, 240, 190] } }
 }
 const fillOf = (cat: string) => CAT_FILL[cat] ?? CLASS_FILL[kindOf(cat)]
+// Maps from Normal to Big: black on light grey, then on white, always edged
+// in the kind's tint, so an 8-mod and an Originator map differ by border,
+// beam and icon (Guy's B). Size, sound and beam make the step louder.
+const MAP_STEP: Partial<Record<CStep, Rgb>> = { 2: [205, 205, 205], 3: [255, 255, 255], 4: [255, 255, 255] }
 
 export function catColour (cat: string, c: Pick<CurrencySettings, 'cats' | 'chaseLook'>): { rgb: [number, number, number], color: string, shape: string } {
   const d = cat === 'uniqchase' ? { ...UNIQUE_LOOK.uniqchase, text: chaseLookOf(c.chaseLook).text as [number, number, number], color: chaseLookOf(c.chaseLook).color } : CAT_LOOK[cat] ?? FRAGMENT_LOOK[cat] ?? CARD_LOOK[cat] ?? UNIQUE_LOOK[cat] ?? GEM_LOOK[cat] ?? MAP_LOOK[cat] ?? JEWEL_LOOK[cat] ?? LEAGUE_LOOK[cat] ?? CAT_LOOK.other
@@ -858,6 +862,8 @@ export function currencyLook (step: CStep, cat: string, c: Pick<CurrencySettings
     case 4: { const f = fillOf(cat); Object.assign(out, f ? { text: col(f.big.text), border: col(c.cats[cat]?.text ? rgb : f.big.edge), background: col(f.big.bg) } : { text: col([0, 0, 0]), border: col(rgb), background: col([255, 93, 27]) }); break }
     case 5: Object.assign(out, { border: col(rgb) }); break
   }
+  const mapBg = kindOf(cat) === 'maps' ? MAP_STEP[step] : undefined
+  if (mapBg) Object.assign(out, { text: col([0, 0, 0]), border: col(rgb), background: col(mapBg) })
   // Tink's icon is red, in the category's shape (Guy 2026-11-27).
   out.icon = size == null ? null : { size, color: step === 5 ? 'Red' : color, shape }
   out.effect = effect ? { ...effect, color: step === 5 ? 'Red' : color } : null
@@ -1201,13 +1207,20 @@ function applySpecialMaps (doc: FilterDoc, cfg: CurrencySettings, items: Currenc
   const special = items.filter(it => SPECIAL_MAP_CATS.has(it.cat))
   const first = doc.blocks.find(b => b.type?.startsWith('maps'))
   if (special.length && first) {
-    // A guessed price never hides a map: under the line it falls through to
-    // NeverSink's rules (a corrupted-implicit T16 still shows as a T16).
-    // Only a section or item set Off by hand hides it.
+    // A guessed price never hides a map. Under the line it shows Small in
+    // its kind's tint from the tier normal maps show from (Guy 2026-11-28:
+    // they fell to NeverSink's purple and all looked alike); lower tiers
+    // fall through to NeverSink's rules. Only a section or item set Off by
+    // hand hides it.
     const guessed = (it: CurrencyItem) => it.est && !it.own
+    const floor = cfg.mapFrom > 1 ? [c('MapTier', '>=', [Math.min(cfg.mapFrom, 17)])] : []
     const parts = special.map(it => {
       const x = compileCurrency(cfg, [it], { faint })
-      return guessed(it) && !forcedHidden(it, cfg) ? { ...x, blocks: x.blocks.filter(b => b.tier !== 'faint' && !b.comment.endsWith(': under the line')) } : x
+      if (!guessed(it) || forcedHidden(it, cfg)) return x
+      const under = x.blocks.find(b => b.tier === 'faint' || b.comment.endsWith(': under the line'))
+      const rest = x.blocks.filter(b => b.tier !== 'faint' && !b.comment.endsWith(': under the line'))
+      if (under) rest.push(block(1, [...under.conditions, ...floor], `${it.cat}, guessed, under the line`, currencyLook(1, it.cat, cfg)))
+      return { ...x, blocks: rest }
     })
     const blocks = parts.flatMap(x => x.blocks)
     const shown = blocks.filter(b => b.visibility === 'Show' && b.tier !== 'faint').sort((x, y) => Number(y.tier?.slice(1) ?? 0) - Number(x.tier?.slice(1) ?? 0))
