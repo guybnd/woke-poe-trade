@@ -271,7 +271,7 @@ import { WButton, WChip, WField, WInfo, WToggle, openMenu, vItemTip } from '../u
 import { hideTip } from '../ui/tooltip/tooltip'
 import type { LootFilterStore } from './store'
 import type { LootFilterWidget } from './widget'
-import { cleanMark, DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, markOf, qualityLookFrom, rankLists, readTiered, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
+import { cleanMark, DROP_TIERS, GEAR_ROWS, GEAR_TYPE, NO_TIER, QUALITY_ROWS, exoticBases, QUALITY_STEPS, RANKS, SHOW_FROM, buildBases, gearDefaults, laneOf, magicLikeRares, magicOff, markOf, qualityLookFrom, rankLists, rankSource, shiftAll, takeOver, SLOT_GROUPS, SLOT_ROWS } from './gear'
 import type { GearRarity, GearRow, GearSettings, Lane, SlotGroup } from './gear'
 import { DEFENCES, DEFENCE_ATTR, DEFENCE_COLOURS, KIND_GROUPS, allGearBases, baseInfo, kindIcon } from './gear-bases'
 import type { BaseInfo, Defence } from './gear-bases'
@@ -323,7 +323,7 @@ const moveButtons = computed(() => MOVE_TO.filter(l => !isExoticLane(l.lane) || 
 // the table is off, since on it they are commented out.
 const source = computed(() => {
   const doc = props.store.doc.value
-  return doc ? readTiered(doc) : null
+  return doc ? rankSource(doc) : null
 })
 const defaults = computed(() => {
   const doc = props.store.doc.value
