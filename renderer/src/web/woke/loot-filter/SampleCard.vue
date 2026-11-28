@@ -163,7 +163,7 @@
             <div class="text-xs w-dim">Items in this tier · {{ tierBases.length }}</div>
             <TierItemChips :items="tierBases" :picked="picked" :price-of="priceOf" :min-chaos="config.safetyNet.minChaos" :tip="baseTip" :current="base"
               :chip-title="moveRows.length ? 'Click to pick it, shift-click to pick a run, then Move to. Right-click to move just this one.' : 'Click to pick it'"
-              @pick="pickBase" @menu="chipMenu" />
+              @pick="pickBase" @menu="chipMenu" @pickset="picked = $event" />
             <div v-if="picked.length" :class="$style.bulkBar" role="toolbar" aria-label="Picked items">
               <b class="text-xs">{{ picked.length }} picked</b>
               <span class="grow" />

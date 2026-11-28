@@ -1,6 +1,8 @@
 // The loot filter's own base ranks (base-ranks.json, NeverSink retirement
 // M2): exotic x1/x2 and rare crafting ranks r1-r3, ours, seeded from
 // NeverSink 8.21.1; Rare gear, Drop tiers and Base ranks read them.
+import fs from 'fs'
+import path from 'path'
 import { describe, expect, it } from 'vitest'
 import { parseFilter } from '@/web/woke/loot-filter/parse'
 import { baseRanks } from '@/web/woke/loot-filter/weights'
@@ -34,5 +36,13 @@ describe('own base ranks', () => {
     const ex = exoticBases(doc)
     expect(ex.get('Simplex Amulet')).toEqual(['exotic_valuable'])
     expect(ex.size).toBe(new Set([...table.x1, ...table.x2]).size)
+  })
+
+  it('ranks every talisman exotic, never trash (Guy 2026-11-28)', () => {
+    const exotic = new Set([...table.x1, ...table.x2])
+    const talismans = fs.readFileSync(path.resolve(__dirname, '../../public/data/en/items.ndjson'), 'utf8').split('\n')
+      .filter(l => l.includes('"namespace":"ITEM"')).map(l => (JSON.parse(l) as { name: string }).name).filter(n => / Talisman$/.test(n))
+    expect(talismans.length).toBeGreaterThan(60)
+    expect(talismans.filter(n => !exotic.has(n))).toEqual([])
   })
 })

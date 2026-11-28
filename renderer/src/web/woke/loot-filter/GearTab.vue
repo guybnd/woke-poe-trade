@@ -245,14 +245,23 @@
             <span class="w-faint text-xs">{{ lane.bases.length }}</span>
           </div>
           <div :class="$style.laneBody" class="w-scroll">
-            <button v-for="b in lane.bases.slice(0, LANE_CAP)" :key="b" v-item-tip="{ name: b, note: baseTitle(b, lane.key) }" type="button" :class="[$style.base, picked.includes(b) && $style.picked, drag?.bases.includes(b) && $style.dragging]"
-              :aria-label="baseTitle(b, lane.key)" :aria-pressed="picked.includes(b)" draggable="true" @click="pick(b, $event)" @dragstart="onDragStart($event, b, lane.key)" @dragend="onDragEnd">
-              <img v-if="info(b).icon" :src="info(b).icon!" alt="" :class="$style.icon">
-              <span :class="$style.baseText">
-                <span>{{ b }}</span>
-                <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(b).slot, info(b).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(b, lane.key)"> · was {{ wasRank(b, lane.key) }}</template><template v-if="!isExoticLane(lane.key) && exotics.has(b)"> · <span style="color: #e0b860;">exotic</span></template></span>
-              </span>
-            </button>
+            <template v-for="row in laneItems(lane).slice(0, LANE_CAP)" :key="row.kind === 'base' ? row.base : `fam:${row.family.id}`">
+              <div v-if="row.kind === 'family'" role="button" tabindex="0" :class="[$style.base, $style.famRow, row.bases.every(b => drag?.bases.includes(b)) && $style.dragging]" draggable="true" :data-family="row.family.id"
+                :aria-expanded="famOpen(lane.key, row.family.id)" :title="`${row.family.label}: ${row.bases.length} bases. Drag to move them all; click to open and move single ones.`"
+                @click="toggleFam(lane.key, row.family.id)" @keydown.enter.prevent="toggleFam(lane.key, row.family.id)" @dragstart="onDragStartSet($event, row.bases, lane.key)" @dragend="onDragEnd">
+                <WFoldCaret :open="famOpen(lane.key, row.family.id)" />
+                <img v-if="info(row.bases[0]).icon" :src="info(row.bases[0]).icon!" alt="" :class="$style.icon">
+                <span :class="$style.baseText"><span>{{ row.family.label }}</span><span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ row.bases.length }} bases</span></span>
+              </div>
+              <button v-else v-item-tip="{ name: row.base, note: baseTitle(row.base, lane.key) }" type="button" :class="[$style.base, row.inFam && $style.famMember, picked.includes(row.base) && $style.picked, drag?.bases.includes(row.base) && $style.dragging]"
+                :aria-label="baseTitle(row.base, lane.key)" :aria-pressed="picked.includes(row.base)" draggable="true" @click="pick(row.base, $event)" @dragstart="onDragStart($event, row.base, lane.key)" @dragend="onDragEnd">
+                <img v-if="info(row.base).icon" :src="info(row.base).icon!" alt="" :class="$style.icon">
+                <span :class="$style.baseText">
+                  <span>{{ row.base }}</span>
+                  <span class="w-faint" style="font-size: var(--w-fs-xs, 10px);">{{ [info(row.base).slot, info(row.base).defence].filter(Boolean).join(' · ') }}<template v-if="wasRank(row.base, lane.key)"> · was {{ wasRank(row.base, lane.key) }}</template><template v-if="!isExoticLane(lane.key) && exotics.has(row.base)"> · <span style="color: #e0b860;">exotic</span></template></span>
+                </span>
+              </button>
+            </template>
             <span v-if="lane.bases.length > LANE_CAP" class="w-faint text-xs">+{{ lane.bases.length - LANE_CAP }} more, narrow with search</span>
           </div>
         </div>
@@ -290,6 +299,8 @@ import type { FilterAction } from './parse'
 import { clickOf, togglePick } from '../shared/picks'
 import WFoldCaret from '../ui/WFoldCaret.vue'
 import { canDrop, dragSet, dropMoves } from './gear-drop'
+import { familyOf, foldFamilies } from './base-families'
+import type { Family } from './base-families'
 import type { GearMove } from './gear-drop'
 
 const props = defineProps<{
@@ -757,9 +768,27 @@ function applyMove (x: GearSettings, lane: GearMove, bases: string[]) {
 // Drag a base, or the picked set it's in, onto another column.
 const drag = ref<{ bases: string[], from: string } | null>(null)
 const dropOver = ref<string | null>(null)
+// Families fold in each column (Guy, 2026-11-28); open ones per column.
+const openFams = ref<Set<string>>(new Set())
+const famOpen = (lane: string, fam: string) => openFams.value.has(`${lane}:${fam}`)
+function toggleFam (lane: string, fam: string) {
+  const k = `${lane}:${fam}`
+  const next = new Set(openFams.value)
+  if (!next.delete(k)) next.add(k)
+  openFams.value = next
+}
+// A column's cards: families folded, an open one followed by its bases.
+type LaneItem = { kind: 'base', base: string, inFam: boolean } | { kind: 'family', family: Family, bases: string[] }
+function laneItems (lane: { key: string, bases: string[] }): LaneItem[] {
+  return foldFamilies(lane.bases, b => familyOf(b, info(b).icon)).flatMap((r): LaneItem[] => r.kind === 'base'
+    ? [{ kind: 'base', base: r.base, inFam: false }]
+    : [r, ...(famOpen(lane.key, r.family.id) ? r.bases.map(base => ({ kind: 'base' as const, base, inFam: true })) : [])])
+}
 function onDragStart (e: DragEvent, b: string, from: string) {
+  onDragStartSet(e, dragSet(picked.value, b), from)
+}
+function onDragStartSet (e: DragEvent, bases: string[], from: string) {
   hideTip()
-  const bases = dragSet(picked.value, b)
   drag.value = { bases, from }
   if (!e.dataTransfer) return
   e.dataTransfer.effectAllowed = 'move'
@@ -1122,6 +1151,9 @@ function neverOffBuild () {
 .base:hover { border-color: var(--w-border); }
 .picked { border-color: var(--w-accent, #e0b860); background: rgb(224 184 96 / 14%); }
 .dragging { opacity: 0.45; }
+.famRow { border-color: var(--w-line); background: var(--w-panel-2); }
+.famRow:focus-visible { outline: 2px solid var(--w-accent, #e0b860); }
+.famMember { margin-left: 10px; }
 .laneCan { outline: 1px dashed rgb(224 184 96 / 55%); }
 .laneOver { outline: 2px solid var(--w-accent, #e0b860); background: rgb(224 184 96 / 12%); }
 .laneNo { opacity: 0.5; }

@@ -241,7 +241,8 @@
             <div class="w-group-label" style="padding: 8px 0 2px;">Items in this tier · {{ tier.bases.length }}</div>
             <TierItemChips :items="tierItems" :picked="picked" :price-of="priceOf" :min-chaos="config.safetyNet.minChaos" :tip="baseTip" :locked="movedHere" draggable removable
               chip-title="Click to pick it, shift-click to pick a run. Drag onto a tier to move it, with any others you've picked. Right-click for Move to."
-              @pick="pickBase" @menu="baseMenu" @dragstart="onDragStart" @dragend="dragOver = null" @remove="takeOff" />
+              @pick="pickBase" @menu="baseMenu" @dragstart="onDragStart" @dragend="dragOver = null" @remove="takeOff"
+              @pickset="picked = $event" @removeset="bulkTakeOff" />
             <div v-if="picked.length" :class="[$style.bulkBar, 'w-actions']" role="toolbar" aria-label="Picked items">
               <b class="text-xs">{{ picked.length }} picked</b>
               <span class="grow" />
@@ -251,7 +252,7 @@
               <WButton size="sm" variant="ghost" icon="fas fa-minus-circle" aria-label="Take off" title="Take these off this tier" @click="bulkTakeOff" />
               <WButton size="sm" variant="ghost" icon="fas fa-times" title="Clear" aria-label="Clear picked items" @click="picked = []" />
             </div>
-            <AddItemField v-if="store.doc.value && selType && targets.includes(tier.tier)" :tip-for="baseTip" :key="`${selType}|${tier.tier}`" :doc="store.doc.value" :type="selType" :tier="tier.tier" @add="addItem" />
+            <AddItemField v-if="store.doc.value && selType && targets.includes(tier.tier)" :tip-for="baseTip" :key="`${selType}|${tier.tier}`" :doc="store.doc.value" :type="selType" :tier="tier.tier" @add="addItem" @addset="addItems" />
           </template>
           <!-- A rule that picks items by what they are (class, item level,
                Fated...) has no list of names to edit: say what it catches. -->
@@ -1315,6 +1316,17 @@ function addItem (r: AddResult) {
   const undo = props.store.editWithUndo({ kind: 'move', type, base: r.base, from, to })
   const note = r.caughtBy ? `. ${ruleLabel(r.caughtBy.type, r.caughtBy.tier)} comes first, so it still decides how it looks` : ''
   toast(`${r.sameGroup ? 'Moved' : 'Added'} ${r.base} to ${tierLabel(to)}${note}`, { anchor: panel.value?.el, undo })
+}
+
+// A whole family from the add box, one undo for all of them.
+function addItems (label: string, rs: AddResult[]) {
+  const type = selType.value
+  const to = selTier.value
+  if (!type || !to || !rs.length) return
+  const undo = props.store.editsWithUndo(rs.map(r => ({ kind: 'move' as const, type, base: r.base, from: r.sameGroup ? r.block?.tier ?? '' : '', to })))
+  const caught = rs.filter(r => r.caughtBy).length
+  const note = caught ? `. ${caught} of them sit in an earlier rule, which still decides how they look` : ''
+  toast(`Added ${rs.length} ${label} to ${tierLabel(to)}${note}`, { anchor: panel.value?.el, undo })
 }
 
 // Every tier drawn in its own look, so you see the result before you pick.
